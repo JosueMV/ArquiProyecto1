@@ -47,3 +47,6 @@ _finish_prog:	; cierra la ejecución y cede el contorl de recursos
 	mov rax,60	;rax=sys_exit (60)
         mov rdi,0 	
 	syscall        
+	
+;
+;
