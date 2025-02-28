@@ -1,22 +1,20 @@
 ;##############################	Proyecto3_Por_JosueMV #####################
 ;Instrucciones de consola:
-;
-;
-;
-
-
+;nasm -f elf64 -o proyecto1.o proyecto1.asm
+;ld -o proyecto1EXE proyecto1.o
+;./proyecto1EXE ruta1 ruta2
 
 section .data
-	global _main
+	
 	msg_arg_error db "No ingresó adecuadamente las rutas", 0xa
 	datafile_nm db "datafile.txt",0
 	dataconfig_nm db "dataconfig.txt",0
 
 
 section .text
+	global _main
 
-_start:
-	;
+
 
 _main:
 	cmp rdi, 3; compara si se ingresaron dos rutas
@@ -29,7 +27,8 @@ _main:
 	
 	call finish_prog
 
- 
+_start:
+	; 
 	
 
 
@@ -45,7 +44,7 @@ _printLN:
 _finish_prog:	; cierra la ejecución y cede el contorl de recursos
 	
 	mov rax,60	;rax=sys_exit (60)
-        mov rdi,0 	
+    mov rdi,0 	
 	syscall        
 	
 ;
