@@ -5,43 +5,45 @@
 ;./proyecto1EXE ruta1 ruta2
 
 section .data
-    msg_arg_error db "No ingresó adecuadamente las rutas", 0xa, 0
-    avisoX db "todo bien hasta aquí", 0xa, 0
-
+    finish_alert db 0xa,"Programa finalizado",0xa,0
+    avisoX db "todo bien hasta aquí", 0xa,0
+	msg_arg_error db "Rutas incorrectas", 0xa,0
+	
 section .text
     global _start
 
 _start:
-    mov rdi, 2  ; Simula que argc es 2 (para pruebas)
+    mov rax, [rsp]          ; Cargar argc desde la pila
+	cmp rax, 3              ; ¿Se ingresaron dos rutas? (argc = 3)
+    jne _error_arg                ; Si no es igual a 3, lanza alerta de error y finaliza
 
-    cmp rdi, 3           ; ¿Se ingresaron dos rutas?
-    je _main             ; Si es igual a 3, saltar a _main
 
-    ; Si no se ingresaron bien las rutas, imprimir error y salir
-    mov rsi, msg_arg_error
-    call _printLN
-    call _finish_prog    ; 🔴 Esto finaliza el programa antes de caer en _main
-
-_main:
     mov rsi, avisoX
     call _printLN
-    call _finish_prog
+    
 
+    jmp _finish_prog        ; 
+    
 _printLN:
-    mov rax, 1          ; syscall: sys_write
-    mov rdi, 1          ; STDOUT
-    mov rdx, 100        ; Tamaño máximo (ajústalo según necesites)
+    mov rax, 1              ; syscall: sys_write
+    mov rdi, 1              ; STDOUT
+    mov rdx, 22            ; Tamaño máximo (ajústalo según necesites)
     syscall
     ret
 
+    
+_error_arg:
+    ; Si no hay 3 argumentos, imprimir error y terminar
+    mov rsi, msg_arg_error
+    call _printLN
+    jmp _finish_prog        ; SALTA a _finish_prog para terminar el programa
+	
+	
 _finish_prog:
-    mov rax, 60         ; syscall: sys_exit
-    xor rdi, rdi        ; Código de salida 0
+	mov rsi, finish_alert
+    call _printLN
+    mov rax, 60             ; syscall: sys_exit
+    mov rdi, 0           ; Código de salida 0
     syscall
 
-		
-	
-	       
-	
-;
-;
+

@@ -26,6 +26,8 @@ if [ $? -ne 0 ]; then
 fi
 
 # Ejecutar el programa con argumentos
+echo "==========================================" 
+echo -e "\n"  # Agrega dos saltos de línea
 echo "Ejecutando $ejecutable con $ruta1 y $ruta2..."
 ./"$ejecutable" "$ruta1" "$ruta2"
 
