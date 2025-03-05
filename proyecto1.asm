@@ -8,12 +8,27 @@ section .bss
 	
 	ruta1 resb 256 ;reserva un espacio de 256 caracteres para la ruta1
 	ruta2 resb 256 ;reserva un espacio de 256 caracteres para la ruta2
+	
+	notaAp resw 1
+	notaRe resw 1
+	sizeGr resw 1
+	escala resw 1
+	ord resw 1
+	
+	buffer resb 256 
+	
 section .data
     finish_alert db 0xa,"Programa finalizado",0xa,0
     avisoX db "todo bien hasta aquí", 0xa,0
 	msg_arg_error db "Rutas incorrectas", 0xa,0
-	prueba db "holahoal",10,0
+	
+	error_open_msg db "error al abrir archivo",0xa,0
+	open_check_msg db "Archivo abierto con exito",0xa,0
+	error_read_msg db "error al leer archivo",0xa,0
+	
 	dnewLine db 0xa,0xa,0
+	
+	
 	
 section .text
     global _start
@@ -23,18 +38,14 @@ _start:
 	cmp rax, 3              ; ¿Se ingresaron dos rutas? (argc = 3)
     jne _error_arg                ; Si no es igual a 3, lanza alerta de error y finaliza
 	
-	
-	
-	
-	
-	
-	;%%%%%%%%%%%%%%%%%%%%%%%
+	;obtengo la ruta del archivo 1
 	mov rcx, 0			; setea un contador en cero para aumentar espacios en la cadena
 	mov rsi, [rsp + 16]  ; Obtener puntero argv[1]
-	;mov rsi, prueba
+	;call _validar_ruta	; Valida la ruta antes de copiarla (no funka de momento)
 	mov rdi, ruta1		 ; Obtengo el puntero de ruta1
 	call _copyStr	
 	
+	;imprimo la ruta 1 
     mov rsi, dnewLine
     call _print
     mov rsi, ruta1
@@ -42,28 +53,84 @@ _start:
     mov rsi, dnewLine
     call _print
     
-    mov rcx, 0			; setea un contador en cero para aumentar espacios en la cadena
-	mov rsi, [rsp + 24]  ; Obtener puntero argv[1]
-	;mov rsi, prueba
-	mov rdi, ruta2		 ; Obtengo el puntero de ruta1
+    ;obtengo la ruta 2
+    mov rcx, 0			 ; setea un contador en cero para aumentar espacios en la cadena
+	mov rsi, [rsp + 24]  ; Obtener puntero argv[2]
+	
+	mov rdi, ruta2		 ; Obtengo el puntero de ruta2
 	call _copyStr
 	
-	
+	;imprimo la ruta 2
 	mov rsi, dnewLine
     call _print
     mov rsi, ruta2
     call _print
+    
     mov rsi, dnewLine
     call _print
-    ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    ;leer la configuración
     
     
+    mov rdi, ruta1   ; Dirección del nombre del archivo
+    call _openFile
+   
+    call _readConf
     
-    mov rsi, avisoX
+    mov rsi, dnewLine
     call _print
+    mov rsi, buffer
+    call _print
+    mov rsi, dnewLine
+    call _print
+    
+
+    
+  
 	;======================
     jmp _finish_prog        ; 
+   
+_readConf:
+    mov rax, 0       ; llamada al so, leer
+    mov rdi, rbx     ; Descriptor, identficador del archivo a leer
+    mov rsi, buffer  ; Almacenamos en buffer apartado
+    mov rdx, 256     ; Tamaño del buffer
+    syscall
+    cmp rax, 0       ; Verificar si leyó el archivo
+    jle .error_read  ; en caso que no lo lea, se lanza el aviso
 
+ 
+
+    ret
+
+.error_read:
+    mov rsi, error_read_msg
+    call _print
+    ret
+
+_openFile: 
+
+	mov rax, 2       ; para sys_open
+	mov rsi, 0       ; Modo de apertura (solo lectura)
+	mov rdx, 0       ; Permisos (no necesarios en lectura)
+	syscall
+	cmp rax, 0
+	jl .error_open
+	
+	
+	mov rbx, rax     ; Guardar descriptor en RBX
+	mov rsi, open_check_msg	;imprime que abrió el archivo. ve
+	;verificar que rsi no afecta a nada relacionado sys open
+	call _print
+	ret  
+
+
+.error_open:
+	mov rdi, error_open_msg ; Puntero al mensaje de error
+    call _print 
+    jmp _finish_prog 
+	
+	
 _copyStr:
     mov al, [rsi + rcx]  ; Leer un byte de origen
     mov [rdi + rcx], al  ; Copiarlo en destino
@@ -75,8 +142,12 @@ _copyStr:
 .fin_copia:
 	ret
 			
+_validar_ruta:
+	mov rsi, [rsi]       ; Obtener la dirección real del string
+	test rsi, rsi        ; ¿Es NULL?
+	jz _error_arg
+	ret
 	
-		
 _print:
 	.bucle_print:
 		mov al, [rsi]        ; Extraer el byte actual de la dirección en RSI
@@ -89,7 +160,7 @@ _print:
 		syscall              ; Llamada al sistema para imprimir
 
 		add rsi, 1           ; Avanzar al siguiente carácter
-		jmp .bucle_print            ; Repetir el proceso
+		jmp .bucle_print     ; Repetir el proceso
 
 	.fin_print:
 		ret   

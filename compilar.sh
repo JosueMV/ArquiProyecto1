@@ -6,8 +6,8 @@ objeto="proyecto1.o"
 ejecutable="proyecto1EXE"
 
 # Rutas opcionales (puedes cambiar o pasar argumentos al script)
-ruta1="ruta1"
-ruta2="ruta2"
+ruta1="cnfgFile.txt"
+ruta2="dataFile.txt"
 
 # Compilar con NASM
 echo "Compilando $fuente..."
