@@ -2,4 +2,4 @@ Nota de aprobación: [70]
 Nota de Reposisción: [60]
 Tamaño de los grupos de notas: [5]
 Escala del gráfico: [10]
-Ordenamento: numerico
+Ordenamento: [numérico]

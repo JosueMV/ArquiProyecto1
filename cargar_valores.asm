@@ -29,12 +29,12 @@ section .data
 	
 	dnewLine db 0xa,0xa,0
 	
-	line1 db "Nota de a",0xa
-	line2 db "Nota de R",0xa,
-	line3 "T",0xa
-	line4 "E",0xa
-	line5 "O",0xa
 	
+	line1 db "T",0xa
+	line2 db "E",0xa
+	line3 db "O",0xa
+	line4 db "Nota de a",0xa
+	line5 db "Nota de R",0xa
 	
 section .text
     global _start
@@ -94,21 +94,35 @@ _start:
     mov rsi, dnewLine
     call _print
     
-
-    
+	mov r8, buffer
+	mov r9, line1
+	
+    call _chargeConf
   
 	;======================
     jmp _finish_prog        ; 
  
- ;_chargeConf:
+_chargeConf:
 	;al y bl para valores de las cadenas
-;	mov rsl, buffer
-;	mov al,  [rsl] ;usar rsl y rbp para direccion de buffer y etiqueta
+	mov al,  [r8] ;usar r8 y r9 para direccion de buffer y etiqueta
+	mov bl, [r9]
+	test al, bl
+	je .bucle_linea1
+	
+	mov r9, line2
+	mov bl, [r9]
+	test al, bl
+	je .bucle_linea2
+	
+	mov r9, line3
+	mov bl,[rbp]
+	test al, bl
+	je .bucle_linea3
 	
 	
 	
  
-;.buscarCorc:
+.buscarCorc:
 	
 	
  
