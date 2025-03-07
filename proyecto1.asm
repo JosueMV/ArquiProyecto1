@@ -33,7 +33,7 @@ section .data
 	error_read_msg db "error al leer archivo",0xa,0
 	
 	
-	dnewLine db 0xa,0xa,0
+	dnewLine db 0xa
 	
 	line1 db "ota de a"
 	line2 db "ota de R"
@@ -109,6 +109,7 @@ _start:
     
     
     mov rbp, 0
+    mov rsi, dnewLine
     mov rdx, buffer
     call _chargeCnf
 
@@ -122,9 +123,9 @@ _start:
  
 
 _chargeCnf:;recibe buffer en rdx
-	add rbp,1
+	inc rdx
 	
-	mov rbx, [rdx+rbp]
+	mov rbx, [rdx]
 	mov rcx, [line1]
 	cmp rcx, rbx
 	je .Cnf1
@@ -149,15 +150,13 @@ _chargeCnf:;recibe buffer en rdx
 	cmp rcx, rbx
 	je .Cnf5
 	
-	
-	mov rsi, detec6
-	call _print
 	ret
 .buscar_salto: 
-		add rbp, 1
-		movzx rax, byte [rdx+rbp] ; parece ser que aquí está el error
 		
-		cmp rax, 0xa
+		mov bl, [rdx] ; parece ser que aquí está el error
+		inc rdx
+		mov cl, 0xa
+		cmp bl, cl
 		
 		je .saltolinea
 		
@@ -182,7 +181,7 @@ _chargeCnf:;recibe buffer en rdx
 		jmp .buscar_salto
 
 .Cnf4:
-		mov rsi, detec4
+		mov rsi, avisoX
 		call _print 
 		jmp .buscar_salto
 
