@@ -1,8 +1,12 @@
 ;##############################	Proyecto3_Por_JosueMV #####################
 ;Instrucciones de consola:
 ;nasm -f elf64 -o proyecto1.o proyecto1.asm
+
 ;ld -o proyecto1EXE proyecto1.o
 ;./proyecto1EXE "configFile.txt" "dataFile.txt"
+
+;nasm -f elf64 -g proyecto.asm -o proyecto1.o   ;para debug
+;gcc proyecto1.o -no-pie -o proyectoEXE
 
 section .bss 
 	
@@ -20,20 +24,30 @@ section .bss
 	
 section .data
     finish_alert db 0xa,"Programa finalizado",0xa,0
-    avisoX db "todo bien hasta aquí", 0xa,0
+    avisoX db "avisox", 0xa,0
+    salto_msg db "salto encontrado", 0xa,0
 	msg_arg_error db "Rutas incorrectas", 0xa,0
 	
 	error_open_msg db "error al abrir archivo",0xa,0
 	open_check_msg db "Archivo abierto con exito",0xa,0
+	error_read_msg db "error al leer archivo",0xa,0
 	
 	
 	dnewLine db 0xa,0xa,0
 	
-	line1 db "Nota de a",0xa
-	line2 db "Nota de R",0xa,
-	line3 "T",0xa
-	line4 "E",0xa
-	line5 "O",0xa
+	line1 db "ota de a"
+	line2 db "ota de R"
+	line3 db "amaño de"
+	line4 db "scala de"
+	line5 db "rdenamie"
+	
+	; lineas temporales, para pruebas
+	detec1 db "linea1 encontrada",0xa,0
+	detec2 db "linea2 encontrada",0xa,0
+	detec3 db "linea3 encontrada",0xa,0
+	detec4 db "linea4 encontrada",0xa,0
+	detec5 db "linea5 encontrada",0xa,0
+	detec6 db "Error en archivo de conf",0xa,0
 	
 	
 section .text
@@ -85,7 +99,6 @@ _start:
     call _readConf
     
     mov rdi,rbx		;identifica el archivo a cerrar 
-    
     call _closeFile
     mov rsi, dnewLine
     call _print
@@ -94,25 +107,112 @@ _start:
     mov rsi, dnewLine
     call _print
     
-
     
-  
+    mov rbp, 0
+    mov rdx, buffer
+    call _chargeCnf
+
+	
+    
+	
+	
+	
 	;======================
     jmp _finish_prog        ; 
  
- ;_chargeConf:
-	;al y bl para valores de las cadenas
-;	mov rsl, buffer
-;	mov al,  [rsl] ;usar rsl y rbp para direccion de buffer y etiqueta
+
+_chargeCnf:;recibe buffer en rdx
+	add rbp,1
+	
+	mov rbx, [rdx+rbp]
+	mov rcx, [line1]
+	cmp rcx, rbx
+	je .Cnf1
+		
+	mov rbx, [rdx]	
+	mov rcx, [line2]
+	cmp rcx, rbx
+	je .Cnf2
+	
+	mov rbx, [rdx]	
+	mov rcx, [line3]
+	cmp rcx, rbx
+	je .Cnf3
+	
+	mov rbx, [rdx]
+	mov rcx, [line4]
+	cmp rcx, rbx
+	je .Cnf4
+		
+	mov rbx, [rdx]	
+	mov rcx, [line5]
+	cmp rcx, rbx
+	je .Cnf5
 	
 	
+	mov rsi, detec6
+	call _print
+	ret
+.buscar_salto: 
+		add rbp, 1
+		movzx rax, byte [rdx+rbp] ; parece ser que aquí está el error
+		
+		cmp rax, 0xa
+		
+		je .saltolinea
+		
+		jmp .buscar_salto
+.saltolinea:
 	
- 
+	jmp _chargeCnf
+.Cnf1:
+		
+		mov rsi, detec1
+		call _print 
+		jmp .buscar_salto
+		
+.Cnf2:
+		mov rsi, detec2
+		call _print 
+		jmp .buscar_salto
+
+.Cnf3:
+		mov rsi, detec3
+		call _print 
+		jmp .buscar_salto
+
+.Cnf4:
+		mov rsi, detec4
+		call _print 
+		jmp .buscar_salto
+
+.Cnf5:
+		mov rsi, detec5
+		call _print 
+		jmp .buscar_salto
+
+
+		
+
+			
+			
 ;.buscarCorc:
+	;mov al, [rax]
+	;cmp al, 91
+	;jne .buscarCorc
+	
+	;inc rax
+	;;mov rsi, avisoX
+	;call _print
+	;jmp _chargeCnf
+	;; falta cargar los datos en configuracion
 	
 	
- 
- 
+
+	
+	
+
+
 _closeFile:
     mov rax, 3       ; sys_close
     ;mov rdi, rbx     ; descriptor del archivo guardado en rbx
