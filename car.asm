@@ -1,12 +1,10 @@
 ;##############################	Proyecto3_Por_JosueMV #####################
 ;Instrucciones de consola:
 ;nasm -f elf64 -o proyecto1.o proyecto1.asm
-
 ;ld -o proyecto1EXE proyecto1.o
 ;./proyecto1EXE "configFile.txt" "dataFile.txt"
 
-;nasm -f elf64 -g proyecto.asm -o proyecto1.o   ;para debug
-;gcc proyecto1.o -no-pie -o proyectoEXE
+
 
 section .bss 
 	
@@ -14,13 +12,13 @@ section .bss
 	ruta2 resb 256 ;reserva un espacio de 256 caracteres para la ruta2
 	
 	notaAp resw 1 ;reseva un espacio de 2 byte para el valor nota aprobada
-	notaRe resw 1 ;reserva un espacio para el valor de nota reprobada
-	sizeGr resw 1 ; para tamaño de grupos
-	escala resw 1 ; tamaño de la escala
-	ord resw 1	  ; para guardar si es alfanumerico o alfabetico
+	notaRe resw 1	;
+	sizeGr resw 1
+	escala resw 1
+	ord resw 1
 	
 	buffer resb 256 
-	num_temp resb 10
+	
 	
 section .data
     finish_alert db 0xa,"Programa finalizado",0xa,0
@@ -34,13 +32,14 @@ section .data
 	corchete_msg db "corchete encontrado",0xa,0
 	corchete_cierre_msg db "corchete de cierre encontrado",0xa,0
 	
+	
 	dnewLine db 0xa,0
 	
-	line1 db "ota de a"
-	line2 db "ota de R"
-	line3 db "amaño de "
-	line4 db "scala de"
-	line5 db "rdenamen"
+	line1 db "ota de a",0
+	line2 db "ota de R",0
+	line3 db "amaño de",0
+	line4 db "scala de",0
+	line5 db "rdenamie",0
 
 	; lineas temporales, para pruebas
 	detec1 db "linea1 encontrada",0xa,0
@@ -109,19 +108,11 @@ _start:
     call _print
     
     
- 
+
     mov rsi, dnewLine
     mov rcx, buffer
-    add rcx, 1
-    jmp _chargeCnf
-    _finllyCharge:
-	
-	
-	
-	;mov byte [num_temp], 97
-	
-	mov rsi, num_temp
-	call _print
+    call .buscar_salto
+
 	
     
 	
@@ -131,121 +122,56 @@ _start:
     jmp _finish_prog        ; 
  
 
-_chargeCnf:;recibe buffer en rcx 
-	
-	mov bl, [rcx]
-	mov rbx, [rcx] ;almacena 8 bit apartir de la posicion 2 de cada linea
-	add rcx, 1 ;apunta a la segunda letra del buffer de cada linea
-	
-	cmp bl, 0
-	je .fin_chargeCnf
-	
-	
-	
-	mov r8, [line1] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf1
-	
-	
-	mov r8, [line2] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf2
-	
-	mov r8, [line3] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf3
 
-	mov r8, [line4] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf4
-	
-	mov r8, [line5] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf5
-	
-	jmp _chargeCnf
-	
-.fin_chargeCnf:
-	;mov rsi, rcx
-	;call _print
-	jmp _finllyCharge
-	
-.Cnf1:	
-		mov r9, 0
-		;mov rsi, detec1
-		
-		;call _print 
-		call .buscar_corchete
-		cmp r9,3
-		
-		jge. 
-		
-		jmp _chargeCnf
-.Cnf2:
-		mov r9, 0
-		;mov rsi, detec2
-	
-		;call _print 
-		call .buscar_corchete
-		jmp _chargeCnf
-
-.Cnf3:
-		mov r9, 0
-		;mov rsi, detec3
-		
-		;call _print 
-		call .buscar_corchete
-		jmp _chargeCnf
-
-.Cnf4:
-		mov r9, 0
-		
-		;mov rsi, detec4
-		;call _print 
-		call .buscar_corchete
-		
-		jmp _chargeCnf
-
-.Cnf5:
-		mov r9, 0
-		;mov rsi, detec5
-		;call _print 
-		call .buscar_corchete
-		jmp _chargeCnf
-
-
-
-.buscar_corchete: 
+.buscar_salto: 
     mov bl, [rcx]      ; lee el byte actual
     add rcx,1         ; amuenta la dirección para luego usar el byte posterior
 	
+    cmp bl, 0          ; detecta si el buffer terminó
+    je .fin_buscar_salto  
 
     cmp bl, 91         ; detecta [
     je .corchete_enc   
 
-    jmp .buscar_corchete ; Continuar buscando
+    cmp bl, 93         ; detecta ]
+    je .corchete_cierre  
 
-.fin_buscar_corchete:
-   
-	add rcx, 1
-	ret
+    cmp bl, 0xa       ; detecta salto de linea\n
+    je .salto_enc      
+	
+	
+    jmp .buscar_salto  ; Continuar buscando
+
+.fin_buscar_salto:
+    mov rsi, avisoX
+	call _print
+    ret
 
 .corchete_enc:
-    
-	mov bl, [rcx] 
-    mov byte [num_temp+r9], bl
-    inc r9
-    add rcx, 1
-    mov bl, [rcx]
-    cmp bl, 93
-    je .fin_buscar_corchete
-    
-    jmp .corchete_enc  ; 
+    mov rsi, corchete_msg
+    call _print
+    jmp .buscar_salto  ; ⚠️ ¡`rcx` ya avanzó antes, así que no lo tocamos aquí!
+
+.corchete_cierre:
+    mov rsi, corchete_cierre_msg
+    call _print
+    jmp .buscar_salto  
+
+.salto_enc:
+    mov rsi, salto_msg
+    call _print
+    jmp .buscar_salto  
+
+	
+	
+
+	
+	
 
 
 _closeFile:
     mov rax, 3       ; sys_close
-    mov rdi, rbx     ; descriptor del archivo guardado en rbx
+    ;mov rdi, rbx     ; descriptor del archivo guardado en rbx
     syscall
     ret
     
@@ -263,6 +189,7 @@ _readConf:
     mov rsi, error_read_msg
     call _print
     ret
+
 
 
 _openFile: 
@@ -288,7 +215,7 @@ _openFile:
     jmp _finish_prog 
 	
 	
-_copyStr: ; recibe a rsi como registro de origen y a rdi como destino
+_copyStr:
     mov al, [rsi + rcx]  ; Leer un byte de origen
     mov [rdi + rcx], al  ; Copiarlo en destino
     test al, al          ; verifica si al es cero
@@ -297,6 +224,9 @@ _copyStr: ; recibe a rsi como registro de origen y a rdi como destino
     jmp _copyStr         ; Repetir hasta encontrar 0
 	
 .fin_copia:
+	inc rcx
+	mov al, 0
+	mov [rdi + rcx], al  ; Agrega cero al final
 	ret
 			
 _validar_ruta:
@@ -336,5 +266,3 @@ _finish_prog:
     mov rax, 60             ; syscall: sys_exit
     mov rdi, 0           ; Código de salida 0
     syscall
-
-

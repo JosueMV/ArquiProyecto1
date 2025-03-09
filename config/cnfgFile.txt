@@ -1,5 +1,5 @@
-Nota de aprobación: [70]
-Nota de Reposisción: [60]
-Tamaño de los grupos de notas: [5]
-Escala del gráfico: [10]
-Ordenamento: numerico
+Nota de Reposisción: [63]
+Tamano de los grupos de notas: [5]
+Nota de aprobación: [72]
+Escala del gráfico: [12]
+Ordenamento: [alfabético]
