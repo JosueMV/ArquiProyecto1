@@ -17,14 +17,18 @@ _start:
     mov r10, 0
 
     call _str2int
-    continue: 
-    cmp r10, 455
-    jne _finish_prog
     
+    cmp rax, 455
+    
+    je continue
+    jmp _finish_prog
+    continue: 
 	
     mov rsi, msg_exito
     call _print
     jmp _finish_prog
+
+
 _str2int:
 	
     cmp r9, 3
@@ -36,7 +40,7 @@ _str2int:
 	mov al, 0
     mov al, [buffer]
     sub al, 48
-    mov rbx, r11
+    
     
     .fin_str2int:
 	ret
@@ -54,7 +58,7 @@ _str2int:
 	movzx rax, byte [buffer+2] ; Cargar unidades
 	sub rax, 48                ; Convertir ASCII a número
 	add r10, rax               ; Sumar al resultado final
-
+	mov rax,r10
     jmp .fin_str2int
 
 .decenas:
@@ -66,9 +70,8 @@ _str2int:
 	movzx rax, byte [buffer+1] ; Cargar segundo carácter y extender a 64 bits
 	sub rax, 48               ; Convertir ASCII a número
 	add r10, rax              ; Sumar al resultado anterior
-
+	mov rax, r10
     jmp .fin_str2int
-
 
 
     _print:

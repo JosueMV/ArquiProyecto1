@@ -8,16 +8,17 @@
 ;nasm -f elf64 -g proyecto.asm -o proyecto1.o   ;para debug
 ;gcc proyecto1.o -no-pie -o proyectoEXE
 
+
 section .bss 
 	
 	ruta1 resb 256 ;reserva un espacio de 256 caracteres para la ruta1
 	ruta2 resb 256 ;reserva un espacio de 256 caracteres para la ruta2
 	
-	notaAp resb 1 ;reseva un espacio de 2 byte para el valor nota aprobada
-	notaRe resb 1 ;reserva un espacio para el valor de nota reprobada
-	sizeGr resb 1 ; para tamaño de grupos
-	escala resb 1 ; tamaño de la escala
-	ord resb 1	  ; para guardar si es alfanumerico o alfabetico
+	notaAp resb 1 ;reseva un espacio de 2 byte para el valor nota aprobada, cnf1
+	notaRe resb 1 ;reserva un espacio para el valor de nota reprobada, cnf2
+	sizeGr resb 1 ; para tamaño de grupos, conf3
+	escala resb 1 ; tamaño de la escala, cnf4
+	ord resb 1	  ; para guardar si es alfanumerico o alfabetico, cnf5
 	
 	buffer resb 256 
 	num_temp resb 10
@@ -36,12 +37,12 @@ section .data
 	
 	dnewLine db 0xa,0
 	
-	line1 db "ota de a"
-	line2 db "ota de R"
-	line3 db "amaño de "
-	line4 db "scala de"
-	line5 db "rdenamen"
-
+	line1 db "ota de a" ;confuracion 1 de aprobados
+	line2 db "ota de R" ; conf 2 reprobados
+	line3 db "amaño de "; conf 3 tamaño de grupos
+	line4 db "scala de" ; conf 4 escala
+	line5 db "rdenamen" ; conf 5 ordenamiento
+	defline db 0,0,0,0,0,0,0,0,0,0,0
 	; lineas temporales, para pruebas
 	detec1 db "linea1 encontrada",0xa,0
 	detec2 db "linea2 encontrada",0xa,0
@@ -118,13 +119,19 @@ _start:
 	
 	mov rsi, num_temp
 	call _print
+	;notaAp  72, notaRe 63, ord 1, sizeGr 12, escala 5
+    ;mov al, [sizeGr]
+    mov al, [notaAp]
+    ;mov al, [notaRe]
+    ;mov al, [ord]
+    ;mov al, [escala]
+    cmp al, 100
+    je salto
+	jmp _finish_prog
 	
-	mov al, [ord]; tiene que haber 1
-    cmp al, 1
-    je _finish_prog
-	
+	salto:
 	mov rsi, avisoX
-	call _print
+    call _print
 	
 	;======================
     jmp _finish_prog        ; 
@@ -137,7 +144,7 @@ _chargeCnf:
 	mov rbx, [rcx] ;almacena 8 bit apartir de la posicion 2 de cada linea
 	add rcx, 1 ;apunta a la segunda letra del buffer de cada linea
 	
-	cmp bl, 0		; compara si la cadena ya termino
+	cmp bl, 0		  ; compara si la cadena ya termino
 	je .fin_chargeCnf ; llama la funcion de finalizacion de al funcion
 	
 	
@@ -171,26 +178,38 @@ _chargeCnf:
 .Cnf1:	
 		mov r9, 0		 ; contador de cantidad de digitos guardados en numb_temp
 		call buscar_corchete; mada a buscar el corchete para luego guardar el numero
-		mov [notaAp], al
 		
+		
+		call _str2int
+		mov [notaAp], al
+		mov r10, defline
+		mov [num_temp], r10
 		jmp _chargeCnf
 .Cnf2:
 		mov r9, 0
 		call buscar_corchete
+		call _str2int
 		mov [notaRe], al
-		
+		mov r10, defline
+		mov [num_temp], r10
 		jmp _chargeCnf
 
 .Cnf3:
 		mov r9, 0
 		call buscar_corchete
+		call _str2int
 		mov [sizeGr], al
+		mov r10, defline
+		mov [num_temp], r10
 		jmp _chargeCnf
 
 .Cnf4:
 		mov r9, 0
 		call buscar_corchete
+		call _str2int
 		mov [escala], al
+		mov r10, defline
+		mov [num_temp], r10
 		jmp _chargeCnf
 
 .Cnf5:
@@ -202,11 +221,15 @@ _chargeCnf:
 		
 		mov al, 0		; guarda cero si es ordenamiento numerico
 		mov [ord], al
+		mov r10, defline
+		mov [num_temp], r10
 		jmp _chargeCnf
 		
 		salto_conf5: ;guarda 1 de alfabetico
 	    mov al, 1
 		mov [ord], al
+		mov r10, defline
+		mov [num_temp], r10
 		jmp _chargeCnf
 
 
@@ -245,39 +268,38 @@ _str2int:
     je .decenas
    
 	mov al, 0
-    mov al, [buffer]
+    mov al, [num_temp]
     sub al, 48
-    mov rbx, r11
+    
     
     .fin_str2int:
 	ret
 .centenas:
     
-    movzx rax, byte [buffer]   ; Cargar las centenas
-	sub rax, 48                ; Convierte a ascii
-	imul r10, rax, 100         ; Multiplicar por 100 y almacenar en R10
-
-	movzx rax, byte [buffer+1] ; Cargar decenas
-	sub rax, 48                ; Convierte a ascii
-	imul rax, rax, 10          ; Multiplicar por 10
-	add r10, rax               ; Sumar al resultado anterior
-
-	movzx rax, byte [buffer+2] ; Cargar unidades
-	sub rax, 48                ; Convertir ASCII a número
-	add r10, rax               ; Sumar al resultado final
-
+    mov rax, 0
+    mov al, [num_temp]; carga el digito de las centenas
+	mov bl, [num_temp+1]; carga el digito de las centenas
+	
+	sub al, 48
+	sub bl, 48			; convierte a entero las decencas
+	imul rax, rax, 100  ; desplaza a centenas
+	imul rbx, rbx, 10	;desplaza a decenas
+	
+	add bl, al 			; suma unidades y decenas
+	mov al, [num_temp+2]  ; extrae el digito de unidades
+	sub al, 48          ; convierte a enteros las unidades
+	
+	add al, bl			; suma total, unidades, decenas y centenas
     jmp .fin_str2int
 
 .decenas:
-	
-	movzx rax, byte [buffer]  ; Cargar el primer digito adaptar a 64 bits
-	sub rax, 48               ; Convertir ASCII a número
-	imul r10, rax, 10         ; Multiplicar por 10 y almacenar en R10
-
-	movzx rax, byte [buffer+1] ; Cargar segundo carácter y extender a 64 bits
-	sub rax, 48               ; Convertir ASCII a número
-	add r10, rax              ; Sumar al resultado anterior
-
+	mov rax, 0
+	mov al, [num_temp]  ; Cargar el primer digito centenas
+	mov bl, [num_temp+1]; carga el segundo digito unidades
+	sub al, 48			; convierte las centenas a entero
+	sub bl, 48			; convierte unidades a enteros
+	imul rax, rax, 10		; desplaza a centenas
+	add al, bl			; suma centenas y unidades
     jmp .fin_str2int
  
 
@@ -359,6 +381,7 @@ _print:
 		mov rdx, 1           ; Longitud de 1 byte
 		syscall              ; Llamada al sistema para imprimir
 
+
 		add rsi, 1           ; Avanzar al siguiente carácter
 		jmp .bucle_print     ; Repetir el proceso
 
@@ -380,4 +403,6 @@ _finish_prog:
     mov rdi, 0           ; Código de salida 0
     syscall
 
+
+;_______________________________________________________________
 
