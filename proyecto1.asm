@@ -13,11 +13,11 @@ section .bss
 	ruta1 resb 256 ;reserva un espacio de 256 caracteres para la ruta1
 	ruta2 resb 256 ;reserva un espacio de 256 caracteres para la ruta2
 	
-	notaAp resw 1 ;reseva un espacio de 2 byte para el valor nota aprobada
-	notaRe resw 1 ;reserva un espacio para el valor de nota reprobada
-	sizeGr resw 1 ; para tamaño de grupos
-	escala resw 1 ; tamaño de la escala
-	ord resw 1	  ; para guardar si es alfanumerico o alfabetico
+	notaAp resb 1 ;reseva un espacio de 2 byte para el valor nota aprobada
+	notaRe resb 1 ;reserva un espacio para el valor de nota reprobada
+	sizeGr resb 1 ; para tamaño de grupos
+	escala resb 1 ; tamaño de la escala
+	ord resb 1	  ; para guardar si es alfanumerico o alfabetico
 	
 	buffer resb 256 
 	num_temp resb 10
@@ -111,136 +111,179 @@ _start:
     
  
     mov rsi, dnewLine
-    mov rcx, buffer
-    add rcx, 1
-    jmp _chargeCnf
-    _finllyCharge:
-	
-	
-	
-	;mov byte [num_temp], 97
+    mov rcx, buffer ;carga dirccion del buffer
+    add rcx, 1 		; corre el buffer una linea para iniciar la comparacion
+    call _chargeCnf	
+   
 	
 	mov rsi, num_temp
 	call _print
 	
-    
+	mov al, [ord]; tiene que haber 1
+    cmp al, 1
+    je _finish_prog
 	
-	
+	mov rsi, avisoX
+	call _print
 	
 	;======================
     jmp _finish_prog        ; 
  
 
-_chargeCnf:;recibe buffer en rcx 
+_chargeCnf:
+;recibe buffer en rcx 
 	
-	mov bl, [rcx]
+	mov bl, [rcx]  ;almacena el caracter actual
 	mov rbx, [rcx] ;almacena 8 bit apartir de la posicion 2 de cada linea
 	add rcx, 1 ;apunta a la segunda letra del buffer de cada linea
 	
-	cmp bl, 0
-	je .fin_chargeCnf
-	
+	cmp bl, 0		; compara si la cadena ya termino
+	je .fin_chargeCnf ; llama la funcion de finalizacion de al funcion
 	
 	
 	mov r8, [line1] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf1
+	cmp r8, rbx		; compara contra la frase que identifica a la configuracions 1
+	je .Cnf1        ; si detecta la linea, llamar a guardar el valor de configuracion 1
 	
 	
 	mov r8, [line2] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf2
+	cmp r8, rbx		; compara contra la frase que identifica a la configuracions 2
+	je .Cnf2		
 	
 	mov r8, [line3] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf3
+	cmp r8, rbx		; compara contra la frase que identifica a la configuracions 3
+	je .Cnf3		; si detecta la linea, llamar a guardar el valor de configuracion 5
 
 	mov r8, [line4] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf4
+	cmp r8, rbx		; compara contra la frase que identifica a la configuracions 4
+	je .Cnf4		; si detecta la linea, llamar a guardar el valor de configuracion 5
 	
 	mov r8, [line5] ; almacena 8 byte del identificador de cada linea
-	cmp r8, rbx
-	je .Cnf5
+	cmp r8, rbx		; compara contra la frase que identifica a la configuracions 5
+	je .Cnf5		; si detecta la linea, llamar a guardar el valor de configuracion 5
 	
 	jmp _chargeCnf
 	
 .fin_chargeCnf:
-	;mov rsi, rcx
-	;call _print
-	jmp _finllyCharge
+
+	ret
 	
 .Cnf1:	
-		mov r9, 0
-		;mov rsi, detec1
-		
-		;call _print 
-		call .buscar_corchete
-		cmp r9,3
-		
-		jge. 
+		mov r9, 0		 ; contador de cantidad de digitos guardados en numb_temp
+		call buscar_corchete; mada a buscar el corchete para luego guardar el numero
+		mov [notaAp], al
 		
 		jmp _chargeCnf
 .Cnf2:
 		mov r9, 0
-		;mov rsi, detec2
-	
-		;call _print 
-		call .buscar_corchete
+		call buscar_corchete
+		mov [notaRe], al
+		
 		jmp _chargeCnf
 
 .Cnf3:
 		mov r9, 0
-		;mov rsi, detec3
-		
-		;call _print 
-		call .buscar_corchete
+		call buscar_corchete
+		mov [sizeGr], al
 		jmp _chargeCnf
 
 .Cnf4:
 		mov r9, 0
-		
-		;mov rsi, detec4
-		;call _print 
-		call .buscar_corchete
-		
+		call buscar_corchete
+		mov [escala], al
 		jmp _chargeCnf
 
 .Cnf5:
 		mov r9, 0
-		;mov rsi, detec5
-		;call _print 
-		call .buscar_corchete
+		call buscar_corchete
+		mov bl, [num_temp]
+		cmp bl, 97  ; compara contra a de alfabetico
+		je salto_conf5 ; salta y agrega un 1 que representa alfabetico
+		
+		mov al, 0		; guarda cero si es ordenamiento numerico
+		mov [ord], al
+		jmp _chargeCnf
+		
+		salto_conf5: ;guarda 1 de alfabetico
+	    mov al, 1
+		mov [ord], al
 		jmp _chargeCnf
 
 
-
-.buscar_corchete: 
+buscar_corchete: 		
     mov bl, [rcx]      ; lee el byte actual
     add rcx,1         ; amuenta la dirección para luego usar el byte posterior
 	
-
     cmp bl, 91         ; detecta [
-    je .corchete_enc   
+    je .corchete_enc   ; cuando lo encuentra, se pueden guardar las configuraciones en num_temp
 
-    jmp .buscar_corchete ; Continuar buscando
+    jmp buscar_corchete ; Continuar buscando
 
-.fin_buscar_corchete:
-   
-	add rcx, 1
+.fin_buscar_corchete: ; este bucle avanza por la cadena
+   ; este funcion devuelve la busqueda del identificador de linea
+	add rcx, 1 
 	ret
 
 .corchete_enc:
     
-	mov bl, [rcx] 
-    mov byte [num_temp+r9], bl
-    inc r9
-    add rcx, 1
-    mov bl, [rcx]
-    cmp bl, 93
-    je .fin_buscar_corchete
+	mov bl, [rcx] ; guarda el bit actual
+    mov byte [num_temp+r9], bl	; se van guardando los parametros en num_temp
+    inc r9   					; incrementa el contador para que hace avanzar la direcciones de num_temp
+    add rcx, 1		; incrementa la direccion de buffer, donde estan los parametros
+    mov bl, [rcx]   ; guarda el bit posterior
+    cmp bl, 93		; compara con el ]
+    je .fin_buscar_corchete ; si es ] detiene la busqueda
     
     jmp .corchete_enc  ; 
+
+_str2int:
+	
+    cmp r9, 3
+    je .centenas
+    
+    cmp r9, 2
+    je .decenas
+   
+	mov al, 0
+    mov al, [buffer]
+    sub al, 48
+    mov rbx, r11
+    
+    .fin_str2int:
+	ret
+.centenas:
+    
+    movzx rax, byte [buffer]   ; Cargar las centenas
+	sub rax, 48                ; Convierte a ascii
+	imul r10, rax, 100         ; Multiplicar por 100 y almacenar en R10
+
+	movzx rax, byte [buffer+1] ; Cargar decenas
+	sub rax, 48                ; Convierte a ascii
+	imul rax, rax, 10          ; Multiplicar por 10
+	add r10, rax               ; Sumar al resultado anterior
+
+	movzx rax, byte [buffer+2] ; Cargar unidades
+	sub rax, 48                ; Convertir ASCII a número
+	add r10, rax               ; Sumar al resultado final
+
+    jmp .fin_str2int
+
+.decenas:
+	
+	movzx rax, byte [buffer]  ; Cargar el primer digito adaptar a 64 bits
+	sub rax, 48               ; Convertir ASCII a número
+	imul r10, rax, 10         ; Multiplicar por 10 y almacenar en R10
+
+	movzx rax, byte [buffer+1] ; Cargar segundo carácter y extender a 64 bits
+	sub rax, 48               ; Convertir ASCII a número
+	add r10, rax              ; Sumar al resultado anterior
+
+    jmp .fin_str2int
+ 
+
+
+
+
 
 
 _closeFile:

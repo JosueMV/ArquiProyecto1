@@ -1,5 +1,5 @@
-Ordenamento: [alfabético]
 Nota de Reposisción: [63]
 Tamaño de los grupos de notas: [5]
 Nota de aprobación: [72]
 Escala del gráfico: [12]
+Ordenamento: [alfabético]
