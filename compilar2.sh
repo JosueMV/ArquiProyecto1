@@ -29,7 +29,7 @@ fi
 echo "==========================================" 
 echo -e "\n"  # Agrega dos saltos de línea
 echo "Ejecutando $ejecutable con $ruta1 y $ruta2..."
-./"$ejecutable" "$ruta1" "$ruta2"
+./"$ejecutable" #"$ruta1" "$ruta2"
 
 # Mantener la ventana abierta para ver los resultados
 echo "Presiona Enter para salir..."

@@ -10,18 +10,24 @@
 
 
 section .bss 
-	
+	;espacio reservado para las rutas
 	ruta1 resb 256 ;reserva un espacio de 256 caracteres para la ruta1
 	ruta2 resb 256 ;reserva un espacio de 256 caracteres para la ruta2
 	
+	;espacio reservado para configuracion
 	notaAp resb 1 ;reseva un espacio de 2 byte para el valor nota aprobada, cnf1
 	notaRe resb 1 ;reserva un espacio para el valor de nota reprobada, cnf2
 	sizeGr resb 1 ; para tamaño de grupos, conf3
 	escala resb 1 ; tamaño de la escala, cnf4
 	ord resb 1	  ; para guardar si es alfanumerico o alfabetico, cnf5
 	
+	
 	buffer resb 256 
 	num_temp resb 10
+	
+	data resb 2048
+	
+	
 	
 section .data
     finish_alert db 0xa,"Programa finalizado",0xa,0
@@ -94,45 +100,60 @@ _start:
     ;leer la configuración
     
     
-    mov rdi, ruta1   ; Dirección del nombre del archivo
-    call _openFile
+    mov rdi, ruta1   ; Dirección del nombre del archivo a abrir (conf)
+    call _openFile   ; abre el archivo 1 con la ruta ingresada en rdi
     
     
-    call _readConf
+    call _readConf   ; lee y almacena los datos del archivo de configuracion
     
-    mov rdi,rbx		;identifica el archivo a cerrar 
-    call _closeFile
-    mov rsi, dnewLine
-    call _print
-    mov rsi, buffer
-    call _print
-    mov rsi, dnewLine
+    mov rdi,rbx		  ;identifica el archivo a cerrar 
+    call _closeFile   ; cierra el archivo de configuración
+    mov rsi, dnewLine ; imprime un salto de linea
+    call _print		  ; llama a imprimir
+    mov rsi, buffer	  ; imprime el los datos almanacenados provenientes de el archivo de conf
+    call _print		  ; llama a imprimir
+    mov rsi, dnewLine  ; imprime otro salto de linea
     call _print
     
     
  
     mov rsi, dnewLine
-    mov rcx, buffer ;carga dirccion del buffer
-    add rcx, 1 		; corre el buffer una linea para iniciar la comparacion
+    mov rcx, buffer   ;carga dirccion del buffer
+    add rcx, 1 		  ;corre el buffer una linea para iniciar la comparacion
     call _chargeCnf	
    
-	
-	mov rsi, num_temp
-	call _print
+	;#####test de depuracion de lectura de datos de configuracion
+	;mov rsi, num_temp
+	;call _print
 	;notaAp  72, notaRe 63, ord 1, sizeGr 12, escala 5
     ;mov al, [sizeGr]
-    mov al, [notaAp]
+    ;mov al, [notaAp]
     ;mov al, [notaRe]
     ;mov al, [ord]
     ;mov al, [escala]
-    cmp al, 100
-    je salto
-	jmp _finish_prog
+    ;cmp al, 100
+    ;je salto
+	;jmp _finish_prog
+	;salto:
+	;mov rsi, avisoX
+    ;call _print
 	
-	salto:
-	mov rsi, avisoX
+	
+	mov rdi, ruta2   ; Dirección del nombre del archivo a abrir (conf)
+    call _openFile   ; abre el archivo 1 con la ruta ingresada en rdi
+    
+	call _readData
+	
+	mov rdi,rbx		  ;identifica el archivo a cerrar 
+    call _closeFile   ; cierra el archivo de configuración
+    
+    mov rsi, data
     call _print
-	
+    
+    ;-------------------------
+     
+
+    ;----------------
 	;======================
     jmp _finish_prog        ; 
  
@@ -313,6 +334,20 @@ _closeFile:
     mov rdi, rbx     ; descriptor del archivo guardado en rbx
     syscall
     ret
+
+_readData:
+    ;~ mov rax, 0       ; llamada al so, leer
+    mov rdi, rbx     ; Descriptor, identficador del archivo a leer
+    mov rsi, data  ; Almacenamos en data apartado
+    mov rdx, 2048     ; Tamaño del data
+    syscall
+    cmp rax, 0       ; Verificar si leyó el archivo
+    jle .error_readdata  ; en caso que no lo lea, se lanza el aviso
+    ret
+    .error_readdata:
+    mov rsi, error_read_msg
+    call _print
+    ret
     
 _readConf:
     ;~ mov rax, 0       ; llamada al so, leer
@@ -321,10 +356,10 @@ _readConf:
     mov rdx, 256     ; Tamaño del buffer
     syscall
     cmp rax, 0       ; Verificar si leyó el archivo
-    jle .error_read  ; en caso que no lo lea, se lanza el aviso
+    jle .error_readcnf  ; en caso que no lo lea, se lanza el aviso
     ret
-
-.error_read:
+    
+    .error_readcnf:
     mov rsi, error_read_msg
     call _print
     ret
