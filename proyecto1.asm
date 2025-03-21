@@ -22,16 +22,20 @@ section .bss
 	ord resb 1	  ; para guardar si es alfanumerico o alfabetico, cnf5
 	
 	
-	buffer resb 256 
-	num_temp resb 10
+	buffer resb 256  ; espacio del txt leído 
+	num_temp resb 10 ; para almacenar el valor de texto convertido a entero
 	
-	data resb 2048
+	data resb 2048 ; espacio para los datos a ordenar
+	
+	
+	
 	
 	
 	
 section .data
     finish_alert db 0xa,"Programa finalizado",0xa,0
-    avisoX db "avisox", 0xa,0
+    init_ord_alf db "comienza el ordenamiento alfabético", 0xa,0
+    avisoX db "comienza el ordenamiento alfabético", 0xa,0
     salto_msg db "salto encontrado", 0xa,0
 	msg_arg_error db "Rutas incorrectas", 0xa,0
 	
@@ -57,6 +61,9 @@ section .data
 	detec5 db "linea5 encontrada",0xa,0
 	detec6 db "Error en archivo de conf",0xa,0
 	
+	; ordenamiento alfabetico
+	n_line dd 0 ; contador de lineas
+	dir_lines dd 256 dup (0) ;inicializado en cero
 	
 section .text
     global _start
@@ -150,13 +157,59 @@ _start:
     mov rsi, data
     call _print
     
-    ;-------------------------
-     
+    mov esi, data
+    
+    call imprimir_letra
+    ;comienza el ordenamiento
+	;mov al, [ord]
+    ;cmp al, 0
+	;je ordNum
+	;mov rsi, init_ord_alf
+	;call _print
+	
+	
 
+	;mov rax, data
+    ;mov [dir_lines], rax; extrae la dirección de la primera letra y la guarda en la direccion de dir_line
+	;call _dirTable
+	
+	
+	;mov eax, [dir_lines]  ; 📌 Obtener la dirección de la primera línea
+    ;movzx ebx, byte [eax] ; 📌 Cargar el primer byte (carácter) en EBX
+	;mov rsi, rbx
+	;call _print
+	
+	
+	
+	
+	
+	
     ;----------------
 	;======================
     jmp _finish_prog        ; 
  
+
+imprimir_letra:
+    mov al, [esi]     ; Cargar el carácter actual en AL
+
+    cmp al, 0         ; Verificar si es el terminador nulo ('\0')
+    jz _finish_prog   ; Si es '\0', terminamos
+
+    cmp al, 10        ; Verificar si es salto de línea ('\n')
+    je detener        ; Si es '\n', salir del bucle
+
+    mov eax, 4        ; syscall: sys_write
+    mov ebx, 1        ; File descriptor 1 (STDOUT)
+    mov ecx, esi      ; Dirección del carácter a imprimir
+    mov edx, 1        ; Longitud = 1 (imprimir un solo carácter)
+    int 0x80          ; Llamada al sistema
+
+    inc esi           ; Avanzar al siguiente carácter
+    jmp imprimir_letra ; Repetir el proceso
+
+detener:
+    inc esi           ; Avanzar para no quedarnos en '\n'
+    jmp _finish_prog  ; Finaliza_r
 
 _chargeCnf:
 ;recibe buffer en rcx 
