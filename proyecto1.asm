@@ -25,8 +25,8 @@ section .bss
 	buffer resb 256  ; espacio del txt leído 
 	num_temp resb 10 ; para almacenar el valor de texto convertido a entero
 	
-	data resb 2048 ; espacio para los datos a ordenar
-	
+	data resb 4096 ; espacio para los datos a ordenar
+	line_addrs resq 100       ; Espacio para almacenar hasta 100 direcciones de líneas
 	
 	
 	
@@ -44,6 +44,8 @@ section .data
 	error_read_msg db "error al leer archivo",0xa,0
 	corchete_msg db "corchete encontrado",0xa,0
 	corchete_cierre_msg db "corchete de cierre encontrado",0xa,0
+	orden_alf_msg db "Orden alfabético en ejecucioń",10,0
+	orden_num_msg db "Orden numerico no disponible en este momento",10,0
 	
 	dnewLine db 0xa,0
 	
@@ -61,8 +63,11 @@ section .data
 	detec5 db "linea5 encontrada",0xa,0
 	detec6 db "Error en archivo de conf",0xa,0
 	
+	
+	
+	
 	; ordenamiento alfabetico
-	n_line dd 0 ; contador de lineas
+	line_count resd 1   ; contador de lineas
 	dir_lines dd 256 dup (0) ;inicializado en cero
 	
 section .text
@@ -145,74 +150,146 @@ _start:
 	;mov rsi, avisoX
     ;call _print
 	
-	
+	;# cargar archivo de datos
 	mov rdi, ruta2   ; Dirección del nombre del archivo a abrir (conf)
     call _openFile   ; abre el archivo 1 con la ruta ingresada en rdi
     
-	call _readData
+	call _readData   ; lee y guarda la información de dataFile
 	
 	mov rdi,rbx		  ;identifica el archivo a cerrar 
     call _closeFile   ; cierra el archivo de configuración
     
-    mov rsi, data
+    mov rsi, data	; imprime los datos leídos de dataFile
+    call _print		
+    
+   
+      
+    ;======comienza el ordenamiento alfabético
+	mov al, [ord] ; consulta la configuracioń
+    cmp al, 0		; si es 1, se ejecuta orden alfabético
+	je ordNum
+	
+	mov rsi, orden_alf_msg
+	call _print
+	mov rsi, dnewLine
+    call _print
+    mov rsi, dnewLine
     call _print
     
-    mov esi, data
-    add esi, 0
-    call imprimir_letra
-    
-    ;comienza el ordenamiento
-	;mov al, [ord]
-    ;cmp al, 0
-	;je ordNum
-	;mov rsi, init_ord_alf
-	;call _print
+	call find_lines
+    call sort_lines
+    mov r10, 0
+    call _order_print  
+	jmp continue_prog1
 	
 	
+	;=========comienza el orden numerico
+	ordNum: 
+	mov rsi, orden_num_msg
+	call _print
+	
+	jmp continue_prog1
 
-	;mov rax, data
-    ;mov [dir_lines], rax; extrae la dirección de la primera letra y la guarda en la direccion de dir_line
-	;call _dirTable
 	
 	
-	;mov eax, [dir_lines]  ; 📌 Obtener la dirección de la primera línea
-    ;movzx ebx, byte [eax] ; 📌 Cargar el primer byte (carácter) en EBX
-	;mov rsi, rbx
-	;call _print
-	
-	
-	
-	;situación actual: lee y almacena el dataFile, en un bufer y la idea 
-	;es crear un vector de direcciones para almacenar la ubicación de cada primer letra
-	; pero que ya están ordenadas, y luego con imprimir letra, imprimir linea por linea 
-	; direccion por dirección dentro del arreglo de direcciones
-	
-	
+	continue_prog1: 
     ;----------------
 	;======================
     jmp _finish_prog        ; 
  
 
-imprimir_letra:
-    mov al, [esi]     ; Cargar el carácter actual en AL
+;_______________inicio funcionse para el ordenamiento alfabetico
+   find_lines:
+        mov rsi, data           ; Puntero al inicio del buffer (antes `buffer`)
+        mov rcx, 0              ; Contador de líneas
+        mov rdx, 0              ; Índice del vector de direcciones
 
-    cmp al, 0         ; Verificar si es el terminador nulo ('\0')
-    jz fin_imprimir_letra   ; Si es '\0', terminamos
+    find_lines_loop:
+        cmp byte [rsi], 0       ; Fin del buffer
+        je find_lines_end
 
-    cmp al, 10        ; Verificar si es salto de línea ('\n')
-    je fin_imprimir_letra  ; Si es '\n', terminamos directamente
+        cmp rcx, 0
+        je store_line
 
-    mov eax, 4        ; syscall: sys_write
-    mov ebx, 1        ; File descriptor 1 (STDOUT)
-    mov ecx, esi      ; Dirección del carácter a imprimir
-    mov edx, 1        ; Longitud = 1 (imprimir un solo carácter)
-    int 0x80          ; Llamada al sistema
+        cmp byte [rsi - 1], 10  ; Si el carácter anterior es '\n', es nueva línea
+        jne skip_store
 
-    inc esi           ; Avanzar al siguiente carácter
-    jmp imprimir_letra ; Repetir el proceso
-fin_imprimir_letra:
-	ret
-    
+    store_line:
+        mov [line_addrs + rdx * 8], rsi  ; Guardar dirección en el vector
+        inc rdx
+        inc rcx
+
+    skip_store:
+        inc rsi
+        jmp find_lines_loop
+
+    find_lines_end:
+        mov [line_count], ecx   ; Guardar el número de líneas
+        ret
+
+    ; --- Función: Ordenar líneas por primera letra ---
+    sort_lines:
+        mov rcx, [line_count]   ; Número de líneas
+        dec rcx                 ; Burbujear hasta n-1 comparaciones
+        cmp rcx, 0
+        jle sort_lines_end       ; Si hay 0 o 1 línea, no ordenar
+
+    sort_loop:
+        mov rdi, 0              ; Índice del vector
+        mov rsi, rcx            ; Número de comparaciones por iteración
+
+    inner_loop:
+        mov rax, [line_addrs + rdi * 8]   ; Dirección de línea i
+        mov rbx, [line_addrs + rdi * 8 + 8] ; Dirección de línea i+1
+        mov dl, [rax]            ; Primera letra de línea i
+        mov dh, [rbx]            ; Primera letra de línea i+1
+
+        cmp dl, dh
+        jbe no_swap              ; Si ya están ordenadas, saltar swap
+
+        ; Intercambiar direcciones
+        mov [line_addrs + rdi * 8], rbx
+        mov [line_addrs + rdi * 8 + 8], rax
+
+    no_swap:
+        inc rdi
+        dec rsi
+        jnz inner_loop
+
+        loop sort_loop           ; Repetir para todas las líneas
+
+    sort_lines_end:
+        ret
+
+    ; --- Función: Imprimir líneas ordenadas (Renombrada de `print_loop` a `_order_print`) ---
+    _order_print:
+        mov r12, [line_addrs + r10 * 8]  ; Obtener dirección de la línea
+        call imprimir_letra     ; Llamar a la función para imprimir la línea
+        add r10, 1
+        cmp r10, [line_count]    ; Comparar con la cantidad de líneas
+        jb _order_print         ; Si hay más líneas, continuar
+        
+        ret
+
+    ; --- Función: Imprimir una línea desde una dirección ---
+    imprimir_letra:
+        mov rax, 1              ; syscall: write
+        mov rdi, 1              ; File descriptor stdout
+        mov rsi, r12            ; Dirección del carácter a imprimir
+        mov rdx, 1              ; Longitud de 1 byte
+        syscall
+		
+		mov al, [r12]           ; Cargar el carácter actual en A
+		cmp al,10               ; Verificar si es el terminador nulo ('\n')
+        je fin_imprimir_letra   ; Si es '\n', terminamos
+        
+        inc r12                
+        jmp imprimir_letra      ; Repetir el proceso
+
+    fin_imprimir_letra:
+        ret
+
+;_______________fin funciones para el ordenamiento alfabético
 _chargeCnf:
 ;recibe buffer en rcx 
 	
@@ -378,10 +455,6 @@ _str2int:
 	add al, bl			; suma centenas y unidades
     jmp .fin_str2int
  
-
-
-
-
 
 
 _closeFile:

@@ -4,31 +4,32 @@
 ;ld -o proyecto1EXE proyecto1.o
 ;./proyecto1EXE "configFile.txt" "dataFile.txt"
 section .bss
-    buffer resb 4096            ; Buffer para almacenar el contenido del archivo
-    line_addrs resq 100         ; Espacio para almacenar hasta 100 direcciones de líneas
-    line_count resd 1           ; Contador de líneas
+    data resb 4096            ; Buffer para almacenar el contenido del archivo
+    line_addrs resq 100       ; Espacio para almacenar hasta 100 direcciones de líneas
+    line_count resd 1         ; Contador de líneas
 
 section .data
     filename db "dataFile.txt", 0
-    newline db 10               ; Carácter de nueva línea '\n'
+    newline db 10             ; Carácter de nueva línea '\n'
 
 section .text
     global _start
 
-    ; --- Función: Leer archivo en buffer ---
+    ; --- Función: Leer archivo en data ---
     _start:
         call open_file
         call read_file
         call close_file
         call find_lines
         call sort_lines
-        mov r11, [line_count]
+        
+        mov r11, [line_count]  ; Cargar cantidad de líneas
         cmp r11, 9
         ;je _exit
         
-        mov r10,0
-        call print_loop
-        
+        mov r10, 0
+        call _order_print      ; Cambio aquí: llamando a `_order_print` en vez de `print_loop`
+
         call _exit
 
     ; --- Función: Abrir archivo ---
@@ -46,7 +47,7 @@ section .text
     ; --- Función: Leer archivo ---
     read_file:
         mov rax, 0              ; syscall: read
-        mov rsi, buffer         ; Buffer donde guardar contenido
+        mov rsi, data           ; Buffer donde guardar contenido (antes `buffer`)
         mov rdx, 4096           ; Tamaño máximo a leer
         syscall
         test rax, rax
@@ -62,7 +63,7 @@ section .text
 
     ; --- Función: Procesar líneas y almacenar direcciones ---
     find_lines:
-        mov rsi, buffer         ; Puntero al inicio del buffer
+        mov rsi, data           ; Puntero al inicio del buffer (antes `buffer`)
         mov rcx, 0              ; Contador de líneas
         mov rdx, 0              ; Índice del vector de direcciones
 
@@ -123,23 +124,18 @@ section .text
     sort_lines_end:
         ret
 
- 
-    print_loop:
-        
-        mov r12, [line_addrs + r10 *8]  ; Obtener dirección de la línea
+    ; --- Función: Imprimir líneas ordenadas (Renombrada de `print_loop` a `_order_print`) ---
+    _order_print:
+        mov r12, [line_addrs + r10 * 8]  ; Obtener dirección de la línea
         call imprimir_letra     ; Llamar a la función para imprimir la línea
-        add r10,1
-        cmp r10,  [line_count]           ; Comparar con la cantidad de líneas
-        jb print_loop          ; Si hay más líneas, continuar
+        add r10, 1
+        cmp r10, [line_count]    ; Comparar con la cantidad de líneas
+        jb _order_print         ; Si hay más líneas, continuar
         
-	fin_print_loop: 
-		ret
-
+        ret
 
     ; --- Función: Imprimir una línea desde una dirección ---
     imprimir_letra:
-                 ; Cargar el carácter actual en A
-        ; Imprimir el carácter
         mov rax, 1              ; syscall: write
         mov rdi, 1              ; File descriptor stdout
         mov rsi, r12            ; Dirección del carácter a imprimir
@@ -147,14 +143,13 @@ section .text
         syscall
 		
 		mov al, [r12]           ; Cargar el carácter actual en A
-		cmp al,10            ; Verificar si es el terminador nulo ('\n')
-        je fin_imprimir_letra   ; Si es ']', terminamos
+		cmp al,10               ; Verificar si es el terminador nulo ('\n')
+        je fin_imprimir_letra   ; Si es '\n', terminamos
         
         inc r12                
         jmp imprimir_letra      ; Repetir el proceso
 
     fin_imprimir_letra:
-        
         ret
 
     ; --- Función: Salida del programa ---
