@@ -3,229 +3,164 @@
 ;nasm -f elf64 -o proyecto1.o proyecto1.asm
 ;ld -o proyecto1EXE proyecto1.o
 ;./proyecto1EXE "configFile.txt" "dataFile.txt"
-
- section .data
-    filename db "dataFile.txt", 0  ; Nombre del archivo
-    newline db 10, 0               ; Salto de línea ('\n')
-    data db 2048 dup(0)            ; Espacio reservado para el archivo
-    line_ptrs dd 256 dup(0)        ; Array de punteros a las líneas
-    num_lines dd 0                 ; Contador de líneas
-    msg_correct db "Número de líneas correcto", 0
-    msg_incorrect db "Número de líneas incorrecto", 0
-
 section .bss
-    buffer resb 2  ; Buffer para imprimir caracteres
+    buffer resb 4096            ; Buffer para almacenar el contenido del archivo
+    line_addrs resq 100         ; Espacio para almacenar hasta 100 direcciones de líneas
+    line_count resd 1           ; Contador de líneas
+
+section .data
+    filename db "dataFile.txt", 0
+    newline db 10               ; Carácter de nueva línea '\n'
 
 section .text
     global _start
 
-_start:
-    call abrir_archivo
-    call leer_archivo
-    call cerrar_archivo
-    call procesar_datos
-    call verificar_lineas
-    call ordenar_lineas
-    call imprimir_primera_letra
-   
-    
-    mov esi, data
-    ;call imprimir_letra
-     
-    mov esi, [line_ptrs]
-    ;call imprimir_letra
-    
-    call fin_prog
+    ; --- Función: Leer archivo en buffer ---
+    _start:
+        call open_file
+        call read_file
+        call close_file
+        call find_lines
+        call sort_lines
+        mov r11, [line_count]
+        cmp r11, 9
+        ;je _exit
+        
+        mov r11,0
+        call print_loop
+        
+        call _exit
 
-
- 
-
-imprimir_letra:
-    mov al, [esi]     ; Cargar el carácter actual en AL
-
-    cmp al, 0         ; Verificar si es el terminador nulo ('\0')
-    jz fin_prog   ; Si es '\0', terminamos
-
-    cmp al, 10        ; Verificar si es salto de línea ('\n')
-    je detener        ; Si es '\n', salir del bucle
-
-    mov eax, 4        ; syscall: sys_write
-    mov ebx, 1        ; File descriptor 1 (STDOUT)
-    mov ecx, esi      ; Dirección del carácter a imprimir
-    mov edx, 1        ; Longitud = 1 (imprimir un solo carácter)
-    int 0x80          ; Llamada al sistema
-
-    inc esi           ; Avanzar al siguiente carácter
-    jmp imprimir_letra ; Repetir el proceso
-
-detener:
-    inc esi           ; Avanzar para no quedarnos en '\n'
-    jmp fin_prog  ; Finaliza_r
-
-
-
-
-
-; 📌 1. Abrir el archivo
-abrir_archivo:
-    mov eax, 5          ; syscall: sys_open
-    mov ebx, filename   ; Nombre del archivo
-    mov ecx, 0          ; Solo lectura
-    mov edx, 0          ; Sin flags
-    int 0x80
-    cmp eax, 0
-    jl error_exit
-    mov edi, eax        ; Guardar descriptor
-    ret
-
-; 📌 2. Leer el contenido en 'data'
-leer_archivo:
-    mov eax, 3          ; syscall: sys_read
-    mov ebx, edi        ; Descriptor
-    mov ecx, data       ; Buffer
-    mov edx, 2048       ; Tamaño
-    int 0x80
-    cmp eax, 0
-    jle error_exit
-    mov edx, eax        ; Bytes leídos
-    ret
-
-; 📌 3. Cerrar el archivo
-cerrar_archivo:
-    mov eax, 6          ; syscall: sys_close
-    mov ebx, edi
-    int 0x80
-    ret
-
-; 📌 4. Procesar los datos y extraer las direcciones de las primeras letras de cada línea
-procesar_datos:
-    mov esi, data
-    mov edi, line_ptrs
-    mov ecx, edx
-    xor eax, eax  ; Contador de líneas
-
-siguiente_char:
-    cmp ecx, 0
-    je fin_extraccion
-
-    cmp byte [esi], 10  ; ¿Salto de línea?
-    je nueva_linea
-
-    inc esi
-    dec ecx
-    jmp siguiente_char
-
-nueva_linea:
-    inc esi
-    cmp ecx, 0
-    je fin_extraccion
-
-    cmp eax, 255  ; Límite de líneas
-    jae fin_extraccion
-
-    mov [edi], esi  ; Guardar dirección de inicio de la línea
-    add edi, 4
-    inc eax         ; Incrementar contador
-
-    dec ecx
-    jmp siguiente_char
-
-fin_extraccion:
-    mov [num_lines], eax
-    ret
-
-; 📌 5. Verificar número de líneas
-verificar_lineas:
-    cmp dword [num_lines], 5
-    je correcto
-    mov rsi, msg_incorrect
-    call _print
-    ret
-
-correcto:
-    mov rsi, msg_correct
-    call _print
-    ret
-
-; 📌 6. Ordenamiento Bubble Sort
-ordenar_lineas:
-    mov ecx, [num_lines]
-    dec ecx
-    jle fin_ordenamiento
-
-bucle_externo:
-    mov esi, line_ptrs
-    mov ebx, ecx
-
-bucle_interno:
-    mov eax, [esi]
-    mov edx, [esi+4]
-
-    test eax, eax
-    jz no_swap
-    test edx, edx
-    jz no_swap
-
-    mov al, [eax]  
-    mov dl, [edx]  
-
-    cmp al, dl
-    jbe no_swap    
-
-    ; Intercambiar punteros
-    mov [esi], edx
-    mov [esi+4], eax
-
-no_swap:
-    add esi, 4
-    dec ebx
-    jnz bucle_interno
-
-    loop bucle_externo
-
-fin_ordenamiento:
-    ret
-
-; 📌 7. Imprimir la primera letra de la primera línea
-imprimir_primera_letra:
-    mov esi, [line_ptrs]  ; Obtener dirección de la primera línea
-
-    test esi, esi
-    jz no_lineas
-
-    mov al, [esi]         
-    mov [buffer], al      
-    mov rsi, buffer
-    call _print          
-
-no_lineas:
-    ret
-
-; 📌 8. Finalizar el programa
-fin_prog:
-    mov eax, 1
-    xor ebx, ebx
-    int 0x80
-
-; 📌 Función para imprimir texto en consola
-_print:
-    .bucle_print:
-        mov al, [rsi]
-        test al, al
-        je .fin_print
-
-        mov eax, 1
-        mov edi, 1
-        mov edx, 1
+    ; --- Función: Abrir archivo ---
+    open_file:
+        mov rax, 2              ; syscall: open
+        mov rdi, filename       ; Nombre del archivo
+        mov rsi, 0              ; Modo de solo lectura
+        mov rdx, 0              ; Flags
         syscall
-
-        add rsi, 1
-        jmp .bucle_print
-
-    .fin_print:
+        test rax, rax
+        js _exit                ; Salir si hay error
+        mov rdi, rax            ; Guardar file descriptor en rdi
         ret
 
-error_exit:
-    mov eax, 1
-    mov ebx, 1
-    int 0x80
+    ; --- Función: Leer archivo ---
+    read_file:
+        mov rax, 0              ; syscall: read
+        mov rsi, buffer         ; Buffer donde guardar contenido
+        mov rdx, 4096           ; Tamaño máximo a leer
+        syscall
+        test rax, rax
+        js _exit                ; Salir si hay error
+        mov rbx, rax            ; Guardar bytes leídos en rbx
+        ret
+
+    ; --- Función: Cerrar archivo ---
+    close_file:
+        mov rax, 3              ; syscall: close
+        syscall
+        ret
+
+    ; --- Función: Procesar líneas y almacenar direcciones ---
+    find_lines:
+        mov rsi, buffer         ; Puntero al inicio del buffer
+        mov rcx, 0              ; Contador de líneas
+        mov rdx, 0              ; Índice del vector de direcciones
+
+    find_lines_loop:
+        cmp byte [rsi], 0       ; Fin del buffer
+        je find_lines_end
+
+        cmp rcx, 0
+        je store_line
+
+        cmp byte [rsi - 1], 10  ; Si el carácter anterior es '\n', es nueva línea
+        jne skip_store
+
+    store_line:
+        mov [line_addrs + rdx * 8], rsi  ; Guardar dirección en el vector
+        inc rdx
+        inc rcx
+
+    skip_store:
+        inc rsi
+        jmp find_lines_loop
+
+    find_lines_end:
+        mov [line_count], ecx   ; Guardar el número de líneas
+        ret
+
+    ; --- Función: Ordenar líneas por primera letra ---
+    sort_lines:
+        mov rcx, [line_count]   ; Número de líneas
+        dec rcx                 ; Burbujear hasta n-1 comparaciones
+        cmp rcx, 0
+        jle sort_lines_end       ; Si hay 0 o 1 línea, no ordenar
+
+    sort_loop:
+        mov rdi, 0              ; Índice del vector
+        mov rsi, rcx            ; Número de comparaciones por iteración
+
+    inner_loop:
+        mov rax, [line_addrs + rdi * 8]   ; Dirección de línea i
+        mov rbx, [line_addrs + rdi * 8 + 8] ; Dirección de línea i+1
+        mov dl, [rax]            ; Primera letra de línea i
+        mov dh, [rbx]            ; Primera letra de línea i+1
+
+        cmp dl, dh
+        jbe no_swap              ; Si ya están ordenadas, saltar swap
+
+        ; Intercambiar direcciones
+        mov [line_addrs + rdi * 8], rbx
+        mov [line_addrs + rdi * 8 + 8], rax
+
+    no_swap:
+        inc rdi
+        dec rsi
+        jnz inner_loop
+
+        loop sort_loop           ; Repetir para todas las líneas
+
+    sort_lines_end:
+        ret
+
+ 
+    print_loop:
+        mov r12, [line_addrs + r11 * 8]  ; Obtener dirección de la línea
+        call imprimir_letra     ; Llamar a la función para imprimir la línea
+
+        ; Pasar a la siguiente línea
+        inc r11
+        cmp r11, [line_count]           ; Comparar con la cantidad de líneas
+        jbe print_loop           ; Si hay más líneas, continuar
+	fin_print_loop: 
+		ret
+
+
+    ; --- Función: Imprimir una línea desde una dirección ---
+    imprimir_letra:
+        ;mov al, [r12]           ; Cargar el carácter actual en A
+        ; Imprimir el carácter
+        mov rax, 1              ; syscall: write
+        mov rdi, 1              ; File descriptor stdout
+        mov rsi, r12            ; Dirección del carácter a imprimir
+        mov rdx, 1              ; Longitud de 1 byte
+        syscall
+		
+		cmp al, 0;93              ; Verificar si es el terminador nulo ('\0')
+        je fin_imprimir_letra   ; Si es '\0', terminamos
+        
+		cmp al, 10              ; Verificar si es salto de línea ('\n')
+        je fin_imprimir_letra   ; Si es '\n', terminamos directamente
+        
+        inc r12                
+        jmp imprimir_letra      ; Repetir el proceso
+
+    fin_imprimir_letra:
+        ret
+
+    ; --- Función: Salida del programa ---
+    _exit:
+        mov rax, 60             ; syscall: exit
+        xor rdi, rdi            ; Código de salida 0
+        syscall
+

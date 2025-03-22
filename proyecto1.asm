@@ -158,8 +158,9 @@ _start:
     call _print
     
     mov esi, data
-    
+    add esi, 0
     call imprimir_letra
+    
     ;comienza el ordenamiento
 	;mov al, [ord]
     ;cmp al, 0
@@ -181,7 +182,10 @@ _start:
 	
 	
 	
-	
+	;situación actual: lee y almacena el dataFile, en un bufer y la idea 
+	;es crear un vector de direcciones para almacenar la ubicación de cada primer letra
+	; pero que ya están ordenadas, y luego con imprimir letra, imprimir linea por linea 
+	; direccion por dirección dentro del arreglo de direcciones
 	
 	
     ;----------------
@@ -193,10 +197,10 @@ imprimir_letra:
     mov al, [esi]     ; Cargar el carácter actual en AL
 
     cmp al, 0         ; Verificar si es el terminador nulo ('\0')
-    jz _finish_prog   ; Si es '\0', terminamos
+    jz fin_imprimir_letra   ; Si es '\0', terminamos
 
     cmp al, 10        ; Verificar si es salto de línea ('\n')
-    je detener        ; Si es '\n', salir del bucle
+    je fin_imprimir_letra  ; Si es '\n', terminamos directamente
 
     mov eax, 4        ; syscall: sys_write
     mov ebx, 1        ; File descriptor 1 (STDOUT)
@@ -206,11 +210,9 @@ imprimir_letra:
 
     inc esi           ; Avanzar al siguiente carácter
     jmp imprimir_letra ; Repetir el proceso
-
-detener:
-    inc esi           ; Avanzar para no quedarnos en '\n'
-    jmp _finish_prog  ; Finaliza_r
-
+fin_imprimir_letra:
+	ret
+    
 _chargeCnf:
 ;recibe buffer en rcx 
 	
