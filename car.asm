@@ -26,7 +26,7 @@ section .text
         cmp r11, 9
         ;je _exit
         
-        mov r11,0
+        mov r10,0
         call print_loop
         
         call _exit
@@ -125,20 +125,20 @@ section .text
 
  
     print_loop:
-        mov r12, [line_addrs + r11 * 8]  ; Obtener dirección de la línea
+        
+        mov r12, [line_addrs + r10 *8]  ; Obtener dirección de la línea
         call imprimir_letra     ; Llamar a la función para imprimir la línea
-
-        ; Pasar a la siguiente línea
-        inc r11
-        cmp r11, [line_count]           ; Comparar con la cantidad de líneas
-        jbe print_loop           ; Si hay más líneas, continuar
+        add r10,1
+        cmp r10,  [line_count]           ; Comparar con la cantidad de líneas
+        jb print_loop          ; Si hay más líneas, continuar
+        
 	fin_print_loop: 
 		ret
 
 
     ; --- Función: Imprimir una línea desde una dirección ---
     imprimir_letra:
-        ;mov al, [r12]           ; Cargar el carácter actual en A
+                 ; Cargar el carácter actual en A
         ; Imprimir el carácter
         mov rax, 1              ; syscall: write
         mov rdi, 1              ; File descriptor stdout
@@ -146,16 +146,15 @@ section .text
         mov rdx, 1              ; Longitud de 1 byte
         syscall
 		
-		cmp al, 0;93              ; Verificar si es el terminador nulo ('\0')
-        je fin_imprimir_letra   ; Si es '\0', terminamos
-        
-		cmp al, 10              ; Verificar si es salto de línea ('\n')
-        je fin_imprimir_letra   ; Si es '\n', terminamos directamente
+		mov al, [r12]           ; Cargar el carácter actual en A
+		cmp al,10            ; Verificar si es el terminador nulo ('\n')
+        je fin_imprimir_letra   ; Si es ']', terminamos
         
         inc r12                
         jmp imprimir_letra      ; Repetir el proceso
 
     fin_imprimir_letra:
+        
         ret
 
     ; --- Función: Salida del programa ---
