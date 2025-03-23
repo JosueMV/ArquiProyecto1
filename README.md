@@ -14,16 +14,51 @@ Además, se fomentará el uso de buenas prácticas como la documentación del c�
 ## Comandos de compilación del código
 
 ```bash
-comando 1
-comando 2 
-comando 3
+nasm -f elf64 -o proyecto1.o proyecto1.asm
+ld -o proyecto1EXE proyecto1.o
+./proyecto1EXE "configFile.txt" "dataFile.txt"
 ```
 
-Resultados: 
+Resultados, el programa logra leer ambos archivos, tanto el de configuración, como el de datos, al aplicar la configuración del ordenamiento alfabético, se muestra el correspondiente ordenamiento: 
 
 ```
-cc
-cc
+Ejecutando proyecto1EXE con cnfgFile.txt y dataFile.txt...
+
+cnfgFile.txt
+
+dataFile.txt
+Archivo abierto con exito
+
+Ordenamento: [alfabético]
+Escala del gráfico: [5]
+Nota de Reposisción: [68]
+Nota de aprobación: [100]
+Tamaño de los grupos de notas: [57]
+
+Archivo abierto con exito
+pablo marmol [35]
+ignacio santos [33]
+Ivania [53]
+José [55]
+ana [45]
+mauricio [88]
+maria quezada prado [80]
+zantos [5]
+lucia  [4]
+juan mora porras [34]
+Orden alfabético en ejecucioń
+
+
+Ivania [53]
+José [55]
+ana [45]
+ignacio santos [33]
+juan mora porras [34]
+lucia  [4]
+mauricio [88]
+maria quezada prado [80]
+pablo marmol [35]
+zantos [5]
 
 
 ```
