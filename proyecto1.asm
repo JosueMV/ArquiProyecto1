@@ -220,7 +220,7 @@ _start:
     jmp _finish_prog        ; 
  
 
-;__________________incio de recoleccion de notas    
+;__________________inicio de recoleccion de notas    
 
 find_grade:                          ; rdi contiene la dirección donde guardar notas
     mov rsi, data                    ; Puntero al inicio del buffer
@@ -228,39 +228,44 @@ find_grade:                          ; rdi contiene la dirección donde guardar 
     xor rdx, rdx                     ; Índice del array (inicializado a 0)
 
 find_grades_loop:
-    cmp byte [rsi], 0                ; ¿Fin del buffer?
+    cmp byte [rsi], 0                
     je fin_grades_end
 
-    cmp byte [rsi], '['              ; ¿Es '['?
-    je sumar_digitos_nota           ; Si sí, empezar a sumar caracteres
+    cmp byte [rsi], '['              ; Buscar inicio de nota
+    je procesar_nota                 ; Saltar a procesar el número
 
     inc rsi
     jmp find_grades_loop
 
-sumar_digitos_nota:
-    inc rsi                          ; Avanzar después de '['
-    xor rax, rax                     ; Reiniciar rax para la suma actual
+procesar_nota:
+    inc rsi                          ; Avanzar después de [
+    xor rax, rax                     ; Reiniciar rax para el número actual
 
-sumar_digitos_loop:
-    cmp byte [rsi], ']'              ; ¿Es ']'?
+convertir_numero:
+    cmp byte [rsi], ']'              ; Fin de la nota
     je store_grade
 
-    add al, byte [rsi]               ; Sumar valor ASCII del carácter
+    movzx rbx, byte [rsi]            ; Cargar carácter actual
+    sub rbx, '0'                     ; Convertir ASCII a dígito (0-9)
+    
+    imul rax, 10                     ; Multiplicar número actual por 10
+    add rax, rbx                     ; Agregar dígito al número
+    
     inc rsi
-    jmp sumar_digitos_loop
+    jmp convertir_numero
 
 store_grade:
-    mov [rdi + rdx * 8], rax         ; Guardar la suma en la dirección pasada
+    mov [rdi + rdx * 8], rax         ; Guardar el valor numérico (entero)
     inc rdx
     inc rcx
     inc rsi
     jmp find_grades_loop
 
 fin_grades_end:
-    mov [notas_count], rcx           ; Guardar el número de notas (si usás global fija)
+    mov [notas_count], rcx           ; Guardar el número de notas
     ret
 
-	;__________________________ fin de recoleccioón de notas
+;__________________________ fin de recolección de notas
 
 
 ;_______________inicio recolección de letras
