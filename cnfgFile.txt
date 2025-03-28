@@ -1,4 +1,4 @@
-Ordenamento: [alfabético]
+Ordenamento: [numerico]
 Escala del gráfico: [5]
 Nota de Reposisción: [68]
 Nota de aprobación: [100]

@@ -1,39 +1,65 @@
 section .bss 
-    ruta1 resb 256
-    ruta2 resb 256
-    
-    notaAp resb 1
-    notaRe resb 1
-    sizeGr resb 1
-    escala resb 1
-    ord resb 1
-    
-    buffer resb 256
-    num_temp resb 10
-    
-    data resb 4096
-    line_addrs resq 100       ; Vector para direcciones de líneas
-
+	;espacio reservado para las rutas
+	ruta1 resb 256 ;reserva un espacio de 256 caracteres para la ruta1
+	ruta2 resb 256 ;reserva un espacio de 256 caracteres para la ruta2
+	
+	;espacio reservado para configuracion
+	notaAp resb 1 ;reseva un espacio de 2 byte para el valor nota aprobada, cnf1
+	notaRe resb 1 ;reserva un espacio para el valor de nota reprobada, cnf2
+	sizeGr resb 1 ; para tamaño de grupos, conf3
+	escala resb 1 ; tamaño de la escala, cnf4
+	ord resb 1	  ; para guardar si es alfanumerico o alfabetico, cnf5
+	
+	
+	buffer resb 256  ; espacio del txt leído 
+	num_temp resb 10 ; para almacenar el valor de texto convertido a entero
+	
+	data resb 4096 ; espacio para los datos a ordenar
+	line_addrs resq 100       ; Espacio para almacenar hasta 100 direcciones de líneas
+	notas:      resq 100    ; Reserva espacio para 100 notas (cada una de 8 bytes)
+    notas_count resq 1  
+	
+	
+	
+	
 section .data
     finish_alert db 0xa,"Programa finalizado",0xa,0
-    init_ord_alf db "Iniciando ordenamiento alfabético",0xa,0
-    msg_arg_error db "Rutas incorrectas",0xa,0
-    error_open_msg db "Error al abrir archivo",0xa,0
-    open_check_msg db "Archivo abierto correctamente",0xa,0
-    error_read_msg db "Error al leer archivo",0xa,0
-    orden_alf_msg db "Orden alfabético activado",10,0
-    orden_num_msg db "Orden numérico desactivado",10,0
-    dnewLine db 0xa,0
-    
-    line1 db "ota de a"
-    line2 db "ota de R"
-    line3 db "amaño de"
-    line4 db "scala de"
-    line5 db "rdenamen"
-    defline db 0,0,0,0,0,0,0,0,0,0,0
-
-    line_count dd 0          ; ¡Variable faltante declarada!
-
+    init_ord_alf db "comienza el ordenamiento alfabético", 0xa,0
+    avisoX db "comienza el ordenamiento alfabético", 0xa,0
+    salto_msg db "salto encontrado", 0xa,0
+	msg_arg_error db "Rutas incorrectas", 0xa,0
+	
+	error_open_msg db "error al abrir archivo",0xa,0
+	open_check_msg db "Archivo abierto con exito",0xa,0
+	error_read_msg db "error al leer archivo",0xa,0
+	corchete_msg db "corchete encontrado",0xa,0
+	corchete_cierre_msg db "corchete de cierre encontrado",0xa,0
+	orden_alf_msg db "Orden alfabético en ejecucioń",10,0
+	orden_num_msg db "Comenzando ordenamiento numerico",10,0
+	
+	dnewLine db 0xa,0
+	
+	line1 db "ota de a" ;confuracion 1 de aprobados
+	line2 db "ota de R" ; conf 2 reprobados
+	line3 db "amaño de "; conf 3 tamaño de grupos
+	line4 db "scala de" ; conf 4 escala
+	line5 db "rdenamen" ; conf 5 ordenamiento
+	defline db 0,0,0,0,0,0,0,0,0,0,0
+	; lineas temporales, para pruebas
+	detec1 db "linea1 encontrada",0xa,0
+	detec2 db "linea2 encontrada",0xa,0
+	detec3 db "linea3 encontrada",0xa,0
+	detec4 db "linea4 encontrada",0xa,0
+	detec5 db "linea5 encontrada",0xa,0
+	detec6 db "Error en archivo de conf",0xa,0
+	
+	
+	
+	
+	; ordenamiento alfabetico
+	line_count resd 1   ; contador de lineas
+	dir_lines dd 256 dup (0) ;inicializado en cero
+	
 section .text
     global _start
 
@@ -128,148 +154,220 @@ _start:
     
    
       
-    ;======comienza el ordenamiento alfabético
+    ;======comienza el ordenamiento
 	mov al, [ord] ; consulta la configuracioń
     cmp al, 0		; si es 1, se ejecuta orden alfabético
 	je ordNum
 	
-	mov rsi, orden_alf_msg
-	call _print
+	; saltos de linea por estéticca
+	
 	mov rsi, dnewLine
     call _print
     mov rsi, dnewLine
     call _print
+	mov rsi, orden_alf_msg
+	call _print
     
+    ;carga la direccion en rdi,y manda a cargar las letras en line_addrs
+    mov rdi, line_addrs
 	call find_lines
-    call sort_lines
+	
+    call sort_alpha  ; ordena line_addrs alfabeticamente
     mov r10, 0
-    call _order_print  
-	jmp continue_prog1
+    call _order_print 	; imprime las lineas ordenadas 
+	jmp con_histograma
 	
 	
-	;=========comienza el orden numerico
+	;                comienza el orden numerico
 	ordNum: 
+	; saltos de linea por estéticca
+	mov rsi, dnewLine
+    call _print
+    mov rsi, dnewLine
+    call _print
 	mov rsi, orden_num_msg
 	call _print
 	
-	jmp continue_prog1
+	
+	
+	mov rdi, line_addrs
+	call find_lines        ; carga las direcciones de la primer letra (arreglo esclavo)
+	mov rdi, notas
+	call find_grade        ;carga las notas en 
+	
+	call sort_numeric		;llama a ordenar numéricamente
+	mov r10, 0
+    call _order_print 	; imprime las lineas ordenadas 
+	
+	jmp con_histograma
 
 	
 	
-	continue_prog1: 
+	con_histograma: 
     ;----------------
 	;======================
-    jmp _finish_prog    
+    jmp _finish_prog        ; 
+ 
 
+;__________________incio de recoleccion de notas    
 
-;   __________________incio de recoleccion de notas    
-
-find_grade:
-    mov rsi, data           ; Puntero al inicio del buffer
-    xor rcx, rcx            ; Contador de notas (inicializado a 0)
-    xor rdx, rdx            ; Índice del array `notas` (inicializado a 0)
+find_grade:                          ; rdi contiene la dirección donde guardar notas
+    mov rsi, data                    ; Puntero al inicio del buffer
+    xor rcx, rcx                     ; Contador de notas (inicializado a 0)
+    xor rdx, rdx                     ; Índice del array (inicializado a 0)
 
 find_grades_loop:
-    cmp byte [rsi], 0       ; Fin del buffer (null-terminated)
+    cmp byte [rsi], 0                ; ¿Fin del buffer?
     je fin_grades_end
 
-    cmp byte [rsi], '['     ; ¿Es '['? (ASCII 91)
-    je sumar_digitos_nota   ; Si sí, empezar a sumar caracteres
+    cmp byte [rsi], '['              ; ¿Es '['?
+    je sumar_digitos_nota           ; Si sí, empezar a sumar caracteres
 
-    inc rsi                 ; Si no, avanzar al siguiente carácter
+    inc rsi
     jmp find_grades_loop
 
 sumar_digitos_nota:
-    inc rsi                 ; Avanzar al primer carácter después de '['
-    xor rax, rax            ; Reiniciar rax para la nueva suma (nota actual)
+    inc rsi                          ; Avanzar después de '['
+    xor rax, rax                     ; Reiniciar rax para la suma actual
 
 sumar_digitos_loop:
-    cmp byte [rsi], ']'     ; ¿Es ']'? (ASCII 93)
-    je store_grade          ; Si sí, guardar la suma y continuar
+    cmp byte [rsi], ']'              ; ¿Es ']'?
+    je store_grade
 
-    add al, byte [rsi]      ; Sumar el valor ASCII del carácter a al
-
-    inc rsi                 ; Avanzar al siguiente carácter
+    add al, byte [rsi]               ; Sumar valor ASCII del carácter
+    inc rsi
     jmp sumar_digitos_loop
 
 store_grade:
-    mov [notas + rdx * 8], rax ; Guardar la suma en el array `notas` (64 bits)
-    inc rdx                 ; Incrementar índice de `notas`
-    inc rcx                 ; Incrementar contador de notas
-    inc rsi                 ; Avanzar más allá de ']'
-    jmp find_grades_loop    ; Continuar buscando más notas
+    mov [rdi + rdx * 8], rax         ; Guardar la suma en la dirección pasada
+    inc rdx
+    inc rcx
+    inc rsi
+    jmp find_grades_loop
 
 fin_grades_end:
-    mov [notas_count], rcx  ; Guardar el número de notas encontradas
+    mov [notas_count], rcx           ; Guardar el número de notas (si usás global fija)
     ret
-;__________________________ fin de recoleccioón de notas
-;
+
+	;__________________________ fin de recoleccioón de notas
 
 
-;_______________inicio recolección de primeras letras
-   find_lines: ;recibe en rsi la direcion del vector
-        mov rsi, data           ; Puntero al inicio del buffer (antes `buffer`)
-        mov rcx, 0              ; Contador de líneas
-        mov rdx, 0              ; Índice del vector de direcciones
+;_______________inicio recolección de letras
+;   rdi es el arreglo line_addrs
+find_lines:
+    mov rsi, data           ; Puntero fijo al buffer de datos (data)
+    xor rcx, rcx            ; Contador de líneas (inicializado a 0)
+    xor rdx, rdx            ; Índice para el array de direcciones (inicializado a 0)
 
-    find_lines_loop:
-        cmp byte [rsi], 0       ; Fin del buffer
-        je find_lines_end
+find_lines_loop:
+    cmp byte [rsi], 0       ; Fin del buffer (null-terminated)
+    je find_lines_end
 
-        cmp rcx, 0
-        je store_line
+    test rcx, rcx           ; ¿Es la primera línea? (rcx == 0)
+    jz store_line           ; Siempre almacenar primera línea
 
-        cmp byte [rsi - 1], 10  ; Si el carácter anterior es '\n', es nueva línea
-        jne skip_store
+    cmp byte [rsi - 1], 10  ; ¿Carácter anterior es '\n'?
+    jne skip_store
 
-    store_line:
-        mov [line_addrs + rdx * 8], rsi  ; Guardar dirección en el vector
-        inc rdx
-        inc rcx
+store_line:
+    mov [rdi + rdx * 8], rsi ; Guardar dirección en el array recibido (rdi)
+    inc rdx                 ; Incrementar índice del array
+    inc rcx                 ; Incrementar contador de líneas
 
-    skip_store:
-        inc rsi
-        jmp find_lines_loop
+skip_store:
+    inc rsi                 ; Avanzar al siguiente carácter
+    jmp find_lines_loop
 
-    find_lines_end:
-        mov [line_count], ecx   ; Guardar el número de líneas
-        ret
+find_lines_end:
+    mov [line_count], ecx   ; Guardar número total de líneas (en variable global)
+    ret
+;_______________inicio recolección de letras para ordenaminto alphabético
 
-    ; --- Función: Ordenar líneas por primera letra ---
-    sort_lines:
-        mov rcx, [line_count]   ; Número de líneas
-        dec rcx                 ; Burbujear hasta n-1 comparaciones
-        cmp rcx, 0
-        jle sort_lines_end       ; Si hay 0 o 1 línea, no ordenar
 
-    sort_loop:
-        mov rdi, 0              ; Índice del vector
-        mov rsi, rcx            ; Número de comparaciones por iteración
 
-    inner_loop:
-        mov rax, [line_addrs + rdi * 8]   ; Dirección de línea i
-        mov rbx, [line_addrs + rdi * 8 + 8] ; Dirección de línea i+1
-        mov dl, [rax]            ; Primera letra de línea i
-        mov dh, [rbx]            ; Primera letra de línea i+1
 
-        cmp dl, dh
-        jbe no_swap              ; Si ya están ordenadas, saltar swap
+;_____________________inicio: ordenamiento numerico
 
-        ; Intercambiar direcciones
-        mov [line_addrs + rdi * 8], rbx
-        mov [line_addrs + rdi * 8 + 8], rax
+sort_numeric:
+    mov rcx, [line_count]       ; Número total de elementos
+    dec rcx                     ; Necesitamos n-1 pasadas
+    cmp rcx, 0
+    jle sort_numeric_done       ; Si hay 0 o 1 elemento, no se ordena
 
-    no_swap:
-        inc rdi
-        dec rsi
-        jnz inner_loop
+sort_numeric_outer:
+    mov rdi, 0                  ; Índice para recorrer
+    mov rsi, rcx                ; Comparaciones por pasada
 
-        loop sort_loop           ; Repetir para todas las líneas
+sort_numeric_inner:
+    mov rax, [notas + rdi * 8]
+    mov rbx, [notas + rdi * 8 + 8]
+    cmp rax, rbx
+    jbe sort_numeric_no_swap
 
-    sort_lines_end:
-        ret
+    ; Intercambiar notas[rdi] y notas[rdi + 1]
+    mov rax, [notas + rdi * 8]
+    mov rbx, [notas + rdi * 8 + 8]
+    mov [notas + rdi * 8], rbx
+    mov [notas + rdi * 8 + 8], rax
 
-    ; --- Función: Imprimir líneas ordenadas (Renombrada de `print_loop` a `_order_print`) ---
+    ; Intercambiar también line_addrs[rdi] y line_addrs[rdi + 1]
+    mov rax, [line_addrs + rdi * 8]
+    mov rbx, [line_addrs + rdi * 8 + 8]
+    mov [line_addrs + rdi * 8], rbx
+    mov [line_addrs + rdi * 8 + 8], rax
+
+sort_numeric_no_swap:
+    inc rdi
+    dec rsi
+    jnz sort_numeric_inner
+
+    loop sort_numeric_outer
+
+sort_numeric_done:
+    ret
+
+;_____________________fin: ordenamiento numerico
+
+
+
+;_____________________inicio: ordenamiento alfabetico
+sort_alpha:
+    mov rcx, [line_count]           ; Número total de líneas
+    dec rcx                         ; Se requieren n-1 pasadas
+    cmp rcx, 0
+    jle sort_alpha_done             ; Si hay 0 o 1 línea, no se ordena
+
+sort_alpha_outer:
+    mov rdi, 0                      ; Índice del vector
+    mov rsi, rcx                    ; Comparaciones restantes en esta pasada
+
+sort_alpha_inner:
+    mov rax, [line_addrs + rdi * 8]        ; Dirección de línea i
+    mov rbx, [line_addrs + rdi * 8 + 8]    ; Dirección de línea i+1
+    mov dl, [rax]                           ; Primer carácter de línea i
+    mov dh, [rbx]                           ; Primer carácter de línea i+1
+
+    cmp dl, dh
+    jbe sort_alpha_no_swap                 ; Si ya están ordenadas, saltar swap
+
+    ; Intercambiar direcciones
+    mov [line_addrs + rdi * 8], rbx
+    mov [line_addrs + rdi * 8 + 8], rax
+
+sort_alpha_no_swap:
+    inc rdi
+    dec rsi
+    jnz sort_alpha_inner
+
+    loop sort_alpha_outer                  ; Repetir para todas las líneas
+
+sort_alpha_done:
+    ret
+
+;_____________________fin: ordenamiento alfabetico
+
+
+;______inicio: imprime las lineas ordenadas: 
     _order_print:
         mov r12, [line_addrs + r10 * 8]  ; Obtener dirección de la línea
         call imprimir_letra     ; Llamar a la función para imprimir la línea
@@ -279,7 +377,7 @@ fin_grades_end:
         
         ret
 
-    ; --- Función: Imprimir una línea desde una dirección ---
+    ; imprime letras hasta topar con salto de linea
     imprimir_letra:
         mov rax, 1              ; syscall: write
         mov rdi, 1              ; File descriptor stdout
@@ -296,8 +394,10 @@ fin_grades_end:
 
     fin_imprimir_letra:
         ret
+;_______________________fin: imprime las lineas ordenadas
 
-;_______________fin funciones para el ordenamiento alfabético
+
+
 _chargeCnf:
 ;recibe buffer en rcx 
 	
@@ -576,3 +676,4 @@ _finish_prog:
 
 
 ;_______________________________________________________________
+
