@@ -1,71 +1,39 @@
-;##############################	Proyecto3_Por_JosueMV #####################
-;Instrucciones de consola:
-;nasm -f elf64 -o proyecto1.o proyecto1.asm
-;ld -o proyecto1EXE proyecto1.o
-;./proyecto1EXE "configFile.txt" "dataFile.txt"
-
-
 section .bss 
-	;espacio reservado para las rutas
-	ruta1 resb 256 ;reserva un espacio de 256 caracteres para la ruta1
-	ruta2 resb 256 ;reserva un espacio de 256 caracteres para la ruta2
-	
-	;espacio reservado para configuracion
-	notaAp resb 1 ;reseva un espacio de 2 byte para el valor nota aprobada, cnf1
-	notaRe resb 1 ;reserva un espacio para el valor de nota reprobada, cnf2
-	sizeGr resb 1 ; para tamaño de grupos, conf3
-	escala resb 1 ; tamaño de la escala, cnf4
-	ord resb 1	  ; para guardar si es alfanumerico o alfabetico, cnf5
-	
-	
-	buffer resb 256  ; espacio del txt leído 
-	num_temp resb 10 ; para almacenar el valor de texto convertido a entero
-	
-	data resb 4096 ; espacio para los datos a ordenar
-	line_addrs resq 100       ; Espacio para almacenar hasta 100 direcciones de líneas
-	notas resb 100 
-	
-	
-	
-	
+    ruta1 resb 256
+    ruta2 resb 256
+    
+    notaAp resb 1
+    notaRe resb 1
+    sizeGr resb 1
+    escala resb 1
+    ord resb 1
+    
+    buffer resb 256
+    num_temp resb 10
+    
+    data resb 4096
+    line_addrs resq 100       ; Vector para direcciones de líneas
+
 section .data
     finish_alert db 0xa,"Programa finalizado",0xa,0
-    init_ord_alf db "comienza el ordenamiento alfabético", 0xa,0
-    avisoX db "comienza el ordenamiento alfabético", 0xa,0
-    salto_msg db "salto encontrado", 0xa,0
-	msg_arg_error db "Rutas incorrectas", 0xa,0
-	
-	error_open_msg db "error al abrir archivo",0xa,0
-	open_check_msg db "Archivo abierto con exito",0xa,0
-	error_read_msg db "error al leer archivo",0xa,0
-	corchete_msg db "corchete encontrado",0xa,0
-	corchete_cierre_msg db "corchete de cierre encontrado",0xa,0
-	orden_alf_msg db "Orden alfabético en ejecucioń",10,0
-	orden_num_msg db "Orden numerico no disponible en este momento",10,0
-	
-	dnewLine db 0xa,0
-	
-	line1 db "ota de a" ;confuracion 1 de aprobados
-	line2 db "ota de R" ; conf 2 reprobados
-	line3 db "amaño de "; conf 3 tamaño de grupos
-	line4 db "scala de" ; conf 4 escala
-	line5 db "rdenamen" ; conf 5 ordenamiento
-	defline db 0,0,0,0,0,0,0,0,0,0,0
-	; lineas temporales, para pruebas
-	detec1 db "linea1 encontrada",0xa,0
-	detec2 db "linea2 encontrada",0xa,0
-	detec3 db "linea3 encontrada",0xa,0
-	detec4 db "linea4 encontrada",0xa,0
-	detec5 db "linea5 encontrada",0xa,0
-	detec6 db "Error en archivo de conf",0xa,0
-	
-	
-	
-	
-	; ordenamiento alfabetico
-	line_count resd 1   ; contador de lineas
-	dir_lines dd 256 dup (0) ;inicializado en cero
-	
+    init_ord_alf db "Iniciando ordenamiento alfabético",0xa,0
+    msg_arg_error db "Rutas incorrectas",0xa,0
+    error_open_msg db "Error al abrir archivo",0xa,0
+    open_check_msg db "Archivo abierto correctamente",0xa,0
+    error_read_msg db "Error al leer archivo",0xa,0
+    orden_alf_msg db "Orden alfabético activado",10,0
+    orden_num_msg db "Orden numérico desactivado",10,0
+    dnewLine db 0xa,0
+    
+    line1 db "ota de a"
+    line2 db "ota de R"
+    line3 db "amaño de"
+    line4 db "scala de"
+    line5 db "rdenamen"
+    defline db 0,0,0,0,0,0,0,0,0,0,0
+
+    line_count dd 0          ; ¡Variable faltante declarada!
+
 section .text
     global _start
 
@@ -191,37 +159,81 @@ _start:
 	continue_prog1: 
     ;----------------
 	;======================
-    jmp _finish_prog        ; 
- 
+    jmp _finish_prog    
 
-;_______________inicio funcionse para el ordenamiento alfabetico
-	find_lines:
-		mov rsi, data           ; Puntero al inicio del buffer (antes `buffer`)
-		mov rcx, 0              ; Contador de líneas
-		mov rdx, 0              ; Índice del vector de direcciones
 
-	find_lines_loop:
-		cmp byte [rsi], 0       ; Fin del buffer
-		je find_lines_end
+;   __________________incio de recoleccion de notas    
 
-		cmp rcx, 0
-		je store_line
+find_grade:
+    mov rsi, data           ; Puntero al inicio del buffer
+    xor rcx, rcx            ; Contador de notas (inicializado a 0)
+    xor rdx, rdx            ; Índice del array `notas` (inicializado a 0)
 
-		cmp byte [rsi - 1], 10  ; Si el carácter anterior es '\n', es nueva línea
-		jne skip_store
+find_grades_loop:
+    cmp byte [rsi], 0       ; Fin del buffer (null-terminated)
+    je fin_grades_end
 
-	store_line:
-		mov [line_addrs + rdx * 8], rsi  ; Guardar dirección en el vector
-		inc rdx
-		inc rcx
+    cmp byte [rsi], '['     ; ¿Es '['? (ASCII 91)
+    je sumar_digitos_nota   ; Si sí, empezar a sumar caracteres
 
-	skip_store:
-		inc rsi
-		jmp find_lines_loop
+    inc rsi                 ; Si no, avanzar al siguiente carácter
+    jmp find_grades_loop
 
-	find_lines_end:
-		mov [line_count], ecx   ; Guardar el número de líneas
-		ret
+sumar_digitos_nota:
+    inc rsi                 ; Avanzar al primer carácter después de '['
+    xor rax, rax            ; Reiniciar rax para la nueva suma (nota actual)
+
+sumar_digitos_loop:
+    cmp byte [rsi], ']'     ; ¿Es ']'? (ASCII 93)
+    je store_grade          ; Si sí, guardar la suma y continuar
+
+    add al, byte [rsi]      ; Sumar el valor ASCII del carácter a al
+
+    inc rsi                 ; Avanzar al siguiente carácter
+    jmp sumar_digitos_loop
+
+store_grade:
+    mov [notas + rdx * 8], rax ; Guardar la suma en el array `notas` (64 bits)
+    inc rdx                 ; Incrementar índice de `notas`
+    inc rcx                 ; Incrementar contador de notas
+    inc rsi                 ; Avanzar más allá de ']'
+    jmp find_grades_loop    ; Continuar buscando más notas
+
+fin_grades_end:
+    mov [notas_count], rcx  ; Guardar el número de notas encontradas
+    ret
+;__________________________ fin de recoleccioón de notas
+;
+
+
+;_______________inicio recolección de primeras letras
+   find_lines: ;recibe en rsi la direcion del vector
+        mov rsi, data           ; Puntero al inicio del buffer (antes `buffer`)
+        mov rcx, 0              ; Contador de líneas
+        mov rdx, 0              ; Índice del vector de direcciones
+
+    find_lines_loop:
+        cmp byte [rsi], 0       ; Fin del buffer
+        je find_lines_end
+
+        cmp rcx, 0
+        je store_line
+
+        cmp byte [rsi - 1], 10  ; Si el carácter anterior es '\n', es nueva línea
+        jne skip_store
+
+    store_line:
+        mov [line_addrs + rdx * 8], rsi  ; Guardar dirección en el vector
+        inc rdx
+        inc rcx
+
+    skip_store:
+        inc rsi
+        jmp find_lines_loop
+
+    find_lines_end:
+        mov [line_count], ecx   ; Guardar el número de líneas
+        ret
 
     ; --- Función: Ordenar líneas por primera letra ---
     sort_lines:
@@ -561,3 +573,6 @@ _finish_prog:
     mov rax, 60             ; syscall: sys_exit
     mov rdi, 0           ; Código de salida 0
     syscall
+
+
+;_______________________________________________________________

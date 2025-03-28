@@ -27,7 +27,8 @@ section .bss
 	
 	data resb 4096 ; espacio para los datos a ordenar
 	line_addrs resq 100       ; Espacio para almacenar hasta 100 direcciones de líneas
-	
+	notas:      resq 100    ; Reserva espacio para 100 notas (cada una de 8 bytes)
+    notas_count resq 1  
 	
 	
 	
@@ -197,6 +198,53 @@ _start:
 	;======================
     jmp _finish_prog        ; 
  
+
+;   __________________incio de recoleccion de notas    
+
+find_grade:
+    mov rsi, data           ; Puntero al inicio del buffer
+    xor rcx, rcx            ; Contador de notas (inicializado a 0)
+    xor rdx, rdx            ; Índice del array `notas` (inicializado a 0)
+
+find_grades_loop:
+    cmp byte [rsi], 0       ; Fin del buffer (null-terminated)
+    je fin_grades_end
+
+    cmp byte [rsi], '['     ; ¿Es '['? (ASCII 91)
+    je sumar_digitos_nota   ; Si sí, empezar a sumar caracteres
+
+    inc rsi                 ; Si no, avanzar al siguiente carácter
+    jmp find_grades_loop
+
+sumar_digitos_nota:
+    inc rsi                 ; Avanzar al primer carácter después de '['
+    xor rax, rax            ; Reiniciar rax para la nueva suma (nota actual)
+
+sumar_digitos_loop:
+    cmp byte [rsi], ']'     ; ¿Es ']'? (ASCII 93)
+    je store_grade          ; Si sí, guardar la suma y continuar
+
+    add al, byte [rsi]      ; Sumar el valor ASCII del carácter a al
+
+    inc rsi                 ; Avanzar al siguiente carácter
+    jmp sumar_digitos_loop
+
+store_grade:
+    mov [notas + rdx * 8], rax ; Guardar la suma en el array `notas` (64 bits)
+    inc rdx                 ; Incrementar índice de `notas`
+    inc rcx                 ; Incrementar contador de notas
+    inc rsi                 ; Avanzar más allá de ']'
+    jmp find_grades_loop    ; Continuar buscando más notas
+
+fin_grades_end:
+    mov [notas_count], rcx  ; Guardar el número de notas encontradas
+    ret
+;__________________________ fin de recoleccioón de notas
+;
+
+
+
+
 
 ;_______________inicio funcionse para el ordenamiento alfabetico
    find_lines:
