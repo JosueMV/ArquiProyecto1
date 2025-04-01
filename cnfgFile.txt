@@ -1,6 +1,6 @@
-Escala del gráfico: [5]
-Nota de aprobación: [100]
-Tamaño de los grupos de notas: [57]
-Nota de Reposisción: [68]
-Ordenamento: [alfabetico]
+Escala del gráfico: [10]
+Nota de aprobación: [70]
+Tamaño de los grupos de notas: [5]
+Nota de Reposisción: [60]
+Ordenamento: [numerico]
 
